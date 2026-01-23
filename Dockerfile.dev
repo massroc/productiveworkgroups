@@ -1,0 +1,30 @@
+# Development Dockerfile for Elixir/Phoenix with hot reloading
+FROM elixir:1.17-otp-27-slim
+
+# Install build dependencies and Node.js for assets
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    git \
+    curl \
+    inotify-tools \
+    postgresql-client \
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y nodejs \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install hex and rebar
+RUN mix local.hex --force && \
+    mix local.rebar --force
+
+# Set working directory
+WORKDIR /app
+
+# Set environment to development
+ENV MIX_ENV=dev
+
+# Expose Phoenix port
+EXPOSE 4000
+
+# Default command starts Phoenix server with live reload
+CMD ["sh", "-c", "mix deps.get && mix ecto.setup && mix phx.server"]

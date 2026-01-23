@@ -1,0 +1,45 @@
+# Git
+.git
+.gitignore
+
+# Build artifacts
+_build/
+deps/
+.elixir_ls/
+
+# Test artifacts
+cover/
+tmp/
+
+# Node modules (will be installed in container)
+assets/node_modules/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local env files
+.env
+.env.local
+*.local
+
+# Documentation
+doc/
+*.md
+!README.md
+
+# Docker
+docker-compose*.yml
+Dockerfile.dev
+
+# CI/CD
+.github/
+
+# Fly.io (only needed at deploy time)
+fly.toml

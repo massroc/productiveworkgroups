@@ -1,0 +1,112 @@
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: productive_workgroups_dev
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Test Database (separate instance for parallel test runs)
+  db_test:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: productive_workgroups_test
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Phoenix Application (Development)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    environment:
+      MIX_ENV: dev
+      DATABASE_URL: ecto://postgres:postgres@db:5432/productive_workgroups_dev
+      PHX_HOST: localhost
+      SECRET_KEY_BASE: dev_secret_key_base_that_is_at_least_64_characters_long_for_development
+    volumes:
+      - .:/app
+      - deps:/app/deps
+      - build:/app/_build
+      - node_modules:/app/assets/node_modules
+    ports:
+      - "4000:4000"
+    depends_on:
+      db:
+        condition: service_healthy
+    stdin_open: true
+    tty: true
+    command: >
+      sh -c "mix deps.get &&
+             mix ecto.create &&
+             mix ecto.migrate &&
+             mix phx.server"
+
+  # Test Runner (for TDD workflow)
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    environment:
+      MIX_ENV: test
+      DATABASE_URL: ecto://postgres:postgres@db_test:5432/productive_workgroups_test
+    volumes:
+      - .:/app
+      - deps:/app/deps
+      - build:/app/_build
+    depends_on:
+      db_test:
+        condition: service_healthy
+    profiles:
+      - test
+    command: mix test
+
+  # Test Watcher (for continuous TDD)
+  test_watch:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    environment:
+      MIX_ENV: test
+      DATABASE_URL: ecto://postgres:postgres@db_test:5432/productive_workgroups_test
+    volumes:
+      - .:/app
+      - deps:/app/deps
+      - build:/app/_build
+    depends_on:
+      db_test:
+        condition: service_healthy
+    profiles:
+      - tdd
+    stdin_open: true
+    tty: true
+    command: >
+      sh -c "mix deps.get &&
+             mix ecto.create --quiet &&
+             mix ecto.migrate --quiet &&
+             mix test --stale --listen-on-stdin"
+
+volumes:
+  postgres_data:
+  deps:
+  build:
+  node_modules:

@@ -1,0 +1,178 @@
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+/* Custom styles for Productive Work Groups */
+
+/* Traffic light colors for score visualization */
+:root {
+  --color-green: #22c55e;
+  --color-amber: #f59e0b;
+  --color-red: #ef4444;
+
+  /* Brand colors from Desirable Futures Group */
+  --color-primary: #3b82f6;
+  --color-primary-dark: #2563eb;
+  --color-background: #111827;
+  --color-surface: #1f2937;
+  --color-text: #f9fafb;
+  --color-text-muted: #9ca3af;
+}
+
+/* Score visualization styles */
+.traffic-light-green {
+  @apply bg-green-500 text-white;
+}
+
+.traffic-light-amber {
+  @apply bg-amber-500 text-white;
+}
+
+.traffic-light-red {
+  @apply bg-red-500 text-white;
+}
+
+/* Balance scale visualization (-5 to +5) */
+.balance-scale {
+  @apply flex items-center justify-center;
+}
+
+.balance-scale-marker {
+  @apply w-2 h-8 mx-0.5 rounded-sm transition-all duration-200;
+}
+
+.balance-scale-marker.active {
+  @apply ring-2 ring-white ring-offset-2 ring-offset-gray-900;
+}
+
+/* Maximal scale visualization (0 to 10) */
+.maximal-scale {
+  @apply flex items-center;
+}
+
+.maximal-scale-segment {
+  @apply h-4 flex-1 transition-all duration-200;
+}
+
+/* Participant presence indicators */
+.presence-indicator {
+  @apply w-3 h-3 rounded-full;
+}
+
+.presence-online {
+  @apply bg-green-500 animate-pulse;
+}
+
+.presence-away {
+  @apply bg-amber-500;
+}
+
+.presence-offline {
+  @apply bg-gray-500;
+}
+
+/* Timer styles */
+.timer {
+  @apply font-mono text-2xl;
+}
+
+.timer-warning {
+  @apply text-amber-500;
+}
+
+.timer-exceeded {
+  @apply text-red-500 animate-pulse;
+}
+
+/* Ready button states */
+.ready-button {
+  @apply transition-all duration-200;
+}
+
+.ready-button-waiting {
+  @apply bg-gray-600 hover:bg-gray-500;
+}
+
+.ready-button-ready {
+  @apply bg-green-600 hover:bg-green-500;
+}
+
+/* Score input slider */
+input[type="range"] {
+  @apply w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  @apply appearance-none w-6 h-6 bg-blue-500 rounded-full cursor-pointer;
+  -webkit-appearance: none;
+}
+
+input[type="range"]::-moz-range-thumb {
+  @apply w-6 h-6 bg-blue-500 rounded-full cursor-pointer border-0;
+}
+
+/* Phase transition animations */
+.phase-enter {
+  @apply opacity-0 translate-y-4;
+}
+
+.phase-enter-active {
+  @apply opacity-100 translate-y-0 transition-all duration-300;
+}
+
+.phase-exit {
+  @apply opacity-100 translate-y-0;
+}
+
+.phase-exit-active {
+  @apply opacity-0 -translate-y-4 transition-all duration-300;
+}
+
+/* Score reveal animation */
+@keyframes score-reveal {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.score-reveal {
+  animation: score-reveal 0.5s ease-out forwards;
+}
+
+/* Card styles for content sections */
+.card {
+  @apply bg-gray-800 rounded-xl p-6 shadow-lg;
+}
+
+.card-header {
+  @apply text-xl font-semibold text-white mb-4;
+}
+
+.card-body {
+  @apply text-gray-300;
+}
+
+/* Accessibility - focus states */
+*:focus-visible {
+  @apply outline-none ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-900;
+}
+
+/* Skip link for keyboard navigation */
+.skip-link {
+  @apply sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-blue-600 focus:text-white focus:rounded;
+}
+
+/* Heroicons overrides for dark theme */
+[class*="hero-"] {
+  @apply inline-block;
+  background-size: contain;
+  background-repeat: no-repeat;
+}
