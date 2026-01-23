@@ -1,5 +1,5 @@
 # Development Dockerfile for Elixir/Phoenix with hot reloading
-FROM elixir:1.17-otp-27-slim
+FROM elixir:1.18-otp-27-slim
 
 # Install build dependencies and Node.js for assets
 RUN apt-get update && apt-get install -y \
