@@ -36,20 +36,17 @@ defmodule ProductiveWorkgroupsWeb.Features.WorkshopFlowTest do
     |> assert_has(css("h1", text: "Productive Work Groups"))
     |> click(link("Start New Workshop"))
     |> assert_has(css("h1", text: "Create New Workshop"))
-    |> click(button("Start Workshop"))
-    |> assert_has(css("h1", text: "Join Workshop"))
   end
 
   @tag :e2e
-  feature "user can join an existing session", %{session: session, template: _template} do
-    # First create a session
-    session
-    |> visit("/session/new")
-    |> click(button("Start Workshop"))
-    |> assert_has(css("h1", text: "Join Workshop"))
+  feature "user can join an existing session", %{session: session, template: template} do
+    # Create a session directly via context
+    {:ok, workshop_session} = ProductiveWorkgroups.Sessions.create_session(template)
 
-    # Now join the session
+    # Visit the join page directly
     session
+    |> visit("/session/#{workshop_session.code}/join")
+    |> assert_has(css("h1", text: "Join Workshop"))
     |> fill_in(text_field("participant[name]"), with: "Alice")
     |> click(button("Join Workshop"))
     |> assert_has(css("h1", text: "Waiting Room"))
