@@ -59,8 +59,11 @@ jobs:
       - name: Check formatting
         run: mix format --check-formatted
 
+      - name: Show dependency versions
+        run: mix deps | grep -E "(gettext|phoenix)"
+
       - name: Compile
-        run: mix compile
+        run: mix compile --warnings-as-errors 2>&1 || (echo "Compile failed. Showing detailed errors:" && mix compile 2>&1; exit 1)
 
       - name: Run Credo
         run: mix credo --strict
