@@ -40,7 +40,7 @@ services:
       dockerfile: Dockerfile.dev
     environment:
       MIX_ENV: dev
-      DATABASE_URL: ecto://postgres:postgres@db:5432/productive_workgroups_dev
+      DB_HOST: db
       PHX_HOST: localhost
       SECRET_KEY_BASE: dev_secret_key_base_that_is_at_least_64_characters_long_for_development
     volumes:
@@ -68,7 +68,7 @@ services:
       dockerfile: Dockerfile.dev
     environment:
       MIX_ENV: test
-      DATABASE_URL: ecto://postgres:postgres@db_test:5432/productive_workgroups_test
+      DB_HOST: db_test
     volumes:
       - .:/app
       - deps:/app/deps
@@ -87,7 +87,7 @@ services:
       dockerfile: Dockerfile.dev
     environment:
       MIX_ENV: test
-      DATABASE_URL: ecto://postgres:postgres@db_test:5432/productive_workgroups_test
+      DB_HOST: db_test
     volumes:
       - .:/app
       - deps:/app/deps

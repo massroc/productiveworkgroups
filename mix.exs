@@ -73,6 +73,7 @@ defmodule ProductiveWorkgroups.MixProject do
       {:excoveralls, "~> 0.18", only: :test},
       {:mox, "~> 1.2", only: :test},
       {:wallaby, "~> 0.30", only: :test, runtime: false},
+      {:lazy_html, ">= 0.1.0", only: :test},
 
       # Development
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},

@@ -11,12 +11,11 @@ config :productive_workgroups, ProductiveWorkgroups.Repo,
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: System.schedulers_online() * 2
 
-# We don't run a server during test. If one is required,
-# you can enable the server option below.
+# Enable server for Wallaby E2E tests
 config :productive_workgroups, ProductiveWorkgroupsWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
   secret_key_base: "test_secret_key_base_that_is_at_least_64_characters_long_for_testing_only",
-  server: false
+  server: true
 
 # In test we don't send emails
 config :productive_workgroups, ProductiveWorkgroups.Mailer, adapter: Swoosh.Adapters.Test
@@ -40,5 +39,9 @@ config :wallaby,
   screenshot_on_failure: true,
   js_errors: true,
   chromedriver: [
+    path: System.get_env("CHROMEDRIVER_PATH", "/usr/bin/chromedriver"),
+    headless: true
+  ],
+  chrome: [
     headless: true
   ]

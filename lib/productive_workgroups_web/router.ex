@@ -24,6 +24,9 @@ defmodule ProductiveWorkgroupsWeb.Router do
     live "/session/new", SessionLive.New, :new
     live "/session/:code", SessionLive.Show, :show
     live "/session/:code/join", SessionLive.Join, :join
+
+    # Controller routes (for actions that need to set session)
+    post "/session/:code/join", SessionController, :join
   end
 
   # Development routes

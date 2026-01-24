@@ -21,10 +21,11 @@ defmodule ProductiveWorkgroups.Factory do
 
   use ExMachina.Ecto, repo: ProductiveWorkgroups.Repo
 
-  # alias ProductiveWorkgroups.Workshops.Template
-  # alias ProductiveWorkgroups.Sessions.Session
-  # alias ProductiveWorkgroups.Sessions.Participant
-  # alias ProductiveWorkgroups.Scoring.Score
+  alias ProductiveWorkgroups.Workshops.{Template, Question}
+  alias ProductiveWorkgroups.Sessions.{Session, Participant}
+  alias ProductiveWorkgroups.Scoring.Score
+  alias ProductiveWorkgroups.Notes.{Note, Action}
+  alias ProductiveWorkgroups.Facilitation.Timer
 
   @doc """
   Generate a unique session code.
@@ -42,42 +43,158 @@ defmodule ProductiveWorkgroups.Factory do
     sequence(:participant_name, &"Participant #{&1}")
   end
 
-  # Example factory definitions (uncomment when schemas are created):
+  # Template factory
+  def template_factory do
+    %Template{
+      name: sequence(:template_name, &"Workshop #{&1}"),
+      slug: sequence(:template_slug, &"workshop-#{&1}"),
+      description: "A test workshop for exploring team dynamics",
+      version: "1.0.0",
+      default_duration_minutes: 210
+    }
+  end
 
-  # def template_factory do
-  #   %Template{
-  #     name: "Six Criteria Workshop",
-  #     slug: "six-criteria",
-  #     description: "Explore the six criteria of productive work",
-  #     version: "1.0.0",
-  #     default_duration_minutes: 210
-  #   }
-  # end
+  # Question factory
+  def question_factory do
+    %Question{
+      index: sequence(:question_index, & &1),
+      title: sequence(:question_title, &"Question #{&1}"),
+      criterion_name: "Test Criterion",
+      explanation: "This is a test question explanation.",
+      scale_type: "balance",
+      scale_min: -5,
+      scale_max: 5,
+      optimal_value: 0,
+      discussion_prompts: ["What do you think about this?", "Any surprises?"],
+      scoring_guidance: "-5 = Low, 0 = Balanced, +5 = High",
+      template: build(:template)
+    }
+  end
 
-  # def session_factory do
-  #   %Session{
-  #     code: unique_session_code(),
-  #     state: :lobby,
-  #     current_question_index: 0,
-  #     settings: %{},
-  #     template: build(:template)
-  #   }
-  # end
+  def maximal_question_factory do
+    struct!(
+      question_factory(),
+      %{
+        scale_type: "maximal",
+        scale_min: 0,
+        scale_max: 10,
+        optimal_value: nil,
+        scoring_guidance: "0 = Low, 10 = High"
+      }
+    )
+  end
 
-  # def participant_factory do
-  #   %Participant{
-  #     name: unique_participant_name(),
-  #     browser_token: Ecto.UUID.generate(),
-  #     status: :active,
-  #     session: build(:session)
-  #   }
-  # end
+  # Session factory
+  def session_factory do
+    %Session{
+      code: unique_session_code(),
+      state: "lobby",
+      current_question_index: 0,
+      settings: %{},
+      last_activity_at: DateTime.utc_now() |> DateTime.truncate(:second),
+      template: build(:template)
+    }
+  end
 
-  # def score_factory do
-  #   %Score{
-  #     value: Enum.random(0..10),
-  #     participant: build(:participant),
-  #     question_index: 0
-  #   }
-  # end
+  def started_session_factory do
+    struct!(
+      session_factory(),
+      %{
+        state: "intro",
+        started_at: DateTime.utc_now() |> DateTime.truncate(:second)
+      }
+    )
+  end
+
+  def scoring_session_factory do
+    struct!(
+      session_factory(),
+      %{
+        state: "scoring",
+        current_question_index: 0,
+        started_at: DateTime.utc_now() |> DateTime.truncate(:second)
+      }
+    )
+  end
+
+  # Participant factory
+  def participant_factory do
+    %Participant{
+      name: unique_participant_name(),
+      browser_token: Ecto.UUID.generate(),
+      status: "active",
+      is_ready: false,
+      joined_at: DateTime.utc_now() |> DateTime.truncate(:second),
+      last_seen_at: DateTime.utc_now() |> DateTime.truncate(:second),
+      session: build(:session)
+    }
+  end
+
+  # Score factory
+  def score_factory do
+    %Score{
+      question_index: 0,
+      value: 0,
+      submitted_at: DateTime.utc_now() |> DateTime.truncate(:second),
+      revealed: false,
+      session: build(:session),
+      participant: build(:participant)
+    }
+  end
+
+  # Note factory
+  def note_factory do
+    %Note{
+      question_index: 0,
+      content: sequence(:note_content, &"Discussion note #{&1}"),
+      author_name: "Test Author",
+      session: build(:session)
+    }
+  end
+
+  def general_note_factory do
+    struct!(
+      note_factory(),
+      %{question_index: nil}
+    )
+  end
+
+  # Action factory
+  def action_factory do
+    %Action{
+      question_index: 0,
+      description: sequence(:action_description, &"Action item #{&1}"),
+      owner_name: nil,
+      completed: false,
+      session: build(:session)
+    }
+  end
+
+  def general_action_factory do
+    struct!(
+      action_factory(),
+      %{question_index: nil}
+    )
+  end
+
+  # Timer factory
+  def timer_factory do
+    %Timer{
+      phase: sequence(:timer_phase, &"phase_#{&1}"),
+      duration_seconds: 300,
+      remaining_seconds: 300,
+      status: "stopped",
+      session: build(:session)
+    }
+  end
+
+  def running_timer_factory do
+    struct!(
+      timer_factory(),
+      %{
+        status: "running",
+        started_at: DateTime.utc_now() |> DateTime.truncate(:second)
+      }
+    )
+  end
 end

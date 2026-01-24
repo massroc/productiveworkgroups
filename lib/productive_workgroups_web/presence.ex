@@ -11,13 +11,13 @@ defmodule ProductiveWorkgroupsWeb.Presence do
       # Track a participant
       ProductiveWorkgroupsWeb.Presence.track(
         self(),
-        "session:#{session_id}",
+        "session:\#{session_id}",
         participant_id,
         %{name: "Alice", status: "active"}
       )
 
       # List presences
-      ProductiveWorkgroupsWeb.Presence.list("session:#{session_id}")
+      ProductiveWorkgroupsWeb.Presence.list("session:\#{session_id}")
   """
 
   use Phoenix.Presence,
