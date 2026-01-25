@@ -206,7 +206,9 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
                 <div class="flex items-center gap-2">
                   <span class="text-white">{p.name}</span>
                   <%= if p.is_facilitator do %>
-                    <span class="text-xs bg-purple-600 text-white px-2 py-1 rounded">Facilitator</span>
+                    <span class="text-xs bg-purple-600 text-white px-2 py-1 rounded">
+                      Facilitator
+                    </span>
                   <% end %>
                 </div>
                 <%= if p.id == @participant.id do %>
@@ -348,7 +350,9 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
           <li>When ready, you move to the next question</li>
         </ol>
         <p class="text-gray-400 mt-6">
-          The goal isn't to "fix" scores — it's to <span class="text-white font-semibold">surface and understand</span> different experiences within your team.
+          The goal isn't to "fix" scores — it's to
+          <span class="text-white font-semibold">surface and understand</span>
+          different experiences within your team.
         </p>
       </div>
     </div>
@@ -360,7 +364,10 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
     <div class="text-center">
       <h1 class="text-3xl font-bold text-white mb-6">Understanding the Balance Scale</h1>
       <div class="text-gray-300 space-y-4 text-lg text-left">
-        <p>The first four questions use a <span class="text-white font-semibold">balance scale</span> from -5 to +5:</p>
+        <p>
+          The first four questions use a <span class="text-white font-semibold">balance scale</span>
+          from -5 to +5:
+        </p>
 
         <div class="bg-gray-800 rounded-lg p-6 my-6">
           <div class="flex justify-between items-center mb-4">
@@ -394,16 +401,24 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
     <div class="text-center">
       <h1 class="text-3xl font-bold text-white mb-6">Creating a Safe Space</h1>
       <div class="text-gray-300 space-y-4 text-lg text-left">
-        <p>This workshop operates under the <span class="text-white font-semibold">Prime Directive</span>:</p>
+        <p>
+          This workshop operates under the <span class="text-white font-semibold">Prime Directive</span>:
+        </p>
 
         <blockquote class="italic text-gray-400 border-l-4 border-purple-600 pl-4 my-6">
           "Regardless of what we discover, we understand and truly believe that everyone did the best job they could, given what they knew at the time, their skills and abilities, the resources available, and the situation at hand."
         </blockquote>
 
-        <p>Your scores reflect the <span class="text-white">system and environment</span> — not individual failings. Low scores aren't accusations; they're opportunities to improve how work is structured.</p>
+        <p>
+          Your scores reflect the <span class="text-white">system and environment</span>
+          — not individual failings. Low scores aren't accusations; they're opportunities to improve how work is structured.
+        </p>
 
         <ul class="space-y-2 pl-4 mt-4">
-          <li>• <span class="text-white">Be honest</span> — this only works if people share their real experience</li>
+          <li>
+            • <span class="text-white">Be honest</span>
+            — this only works if people share their real experience
+          </li>
           <li>• There are no right or wrong scores</li>
           <li>• Differences are expected — they reveal different experiences</li>
           <li>• Your individual scores are visible only to this team</li>

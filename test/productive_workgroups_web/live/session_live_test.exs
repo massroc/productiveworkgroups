@@ -55,7 +55,8 @@ defmodule ProductiveWorkgroupsWeb.SessionLiveTest do
     end
 
     test "creates session and joins as facilitator", %{conn: conn} do
-      conn = post(conn, ~p"/session/create", %{facilitator_name: "Facilitator Jane", duration: "120"})
+      conn =
+        post(conn, ~p"/session/create", %{facilitator_name: "Facilitator Jane", duration: "120"})
 
       # Should redirect to the session page
       assert to = redirected_to(conn)
@@ -237,7 +238,9 @@ defmodule ProductiveWorkgroupsWeb.SessionLiveTest do
     test "shows Start Workshop button for facilitator", %{conn: conn, session: session} do
       # Create a facilitator
       facilitator_token = Ecto.UUID.generate()
-      {:ok, _facilitator} = Sessions.join_session(session, "Lead", facilitator_token, is_facilitator: true)
+
+      {:ok, _facilitator} =
+        Sessions.join_session(session, "Lead", facilitator_token, is_facilitator: true)
 
       conn =
         conn
@@ -268,7 +271,9 @@ defmodule ProductiveWorkgroupsWeb.SessionLiveTest do
 
     test "facilitator can start the workshop", %{conn: conn, session: session} do
       facilitator_token = Ecto.UUID.generate()
-      {:ok, _facilitator} = Sessions.join_session(session, "Lead", facilitator_token, is_facilitator: true)
+
+      {:ok, _facilitator} =
+        Sessions.join_session(session, "Lead", facilitator_token, is_facilitator: true)
 
       conn =
         conn

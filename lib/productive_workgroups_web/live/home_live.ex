@@ -27,7 +27,8 @@ defmodule ProductiveWorkgroupsWeb.HomeLive do
     else
       case ProductiveWorkgroups.Sessions.get_session_by_code(code) do
         nil ->
-          {:noreply, assign(socket, join_error: "Session not found. Check the code and try again.")}
+          {:noreply,
+           assign(socket, join_error: "Session not found. Check the code and try again.")}
 
         _session ->
           {:noreply, push_navigate(socket, to: ~p"/session/#{code}/join")}
@@ -61,8 +62,8 @@ defmodule ProductiveWorkgroupsWeb.HomeLive do
               Start New Workshop
             </.link>
           </div>
-
-          <!-- Join Option -->
+          
+    <!-- Join Option -->
           <div class="bg-gray-800 rounded-xl p-6 text-left">
             <h2 class="text-xl font-semibold text-white mb-2">Join</h2>
             <p class="text-gray-400 text-sm mb-4">

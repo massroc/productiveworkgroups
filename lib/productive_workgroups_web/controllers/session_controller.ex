@@ -17,7 +17,9 @@ defmodule ProductiveWorkgroupsWeb.SessionController do
     with {:ok, name} <- validate_name(facilitator_name),
          {:ok, template} <- get_template(),
          {:ok, session} <-
-           Sessions.create_session(template, %{planned_duration_minutes: String.to_integer(duration)}),
+           Sessions.create_session(template, %{
+             planned_duration_minutes: String.to_integer(duration)
+           }),
          browser_token <- Ecto.UUID.generate(),
          {:ok, _participant} <-
            Sessions.join_session(session, name, browser_token, is_facilitator: true) do
