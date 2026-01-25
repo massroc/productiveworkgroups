@@ -5,6 +5,8 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
   use ProductiveWorkgroupsWeb, :live_view
 
   alias ProductiveWorkgroups.Sessions
+  alias ProductiveWorkgroups.Scoring
+  alias ProductiveWorkgroups.Workshops
 
   @impl true
   def mount(%{"code" => code}, session, socket) do
@@ -36,7 +38,8 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
              |> assign(session: workshop_session)
              |> assign(participant: participant)
              |> assign(participants: participants)
-             |> assign(intro_step: 1)}
+             |> assign(intro_step: 1)
+             |> load_scoring_data(workshop_session, participant)}
           else
             # Browser token doesn't match any participant - redirect to join
             {:ok,
@@ -102,6 +105,18 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
     {:noreply, assign(socket, session: session)}
   end
 
+  # Handle score submission broadcast from other participants
+  @impl true
+  def handle_info({:score_submitted, _participant_id, question_index}, socket) do
+    session = socket.assigns.session
+
+    if session.state == "scoring" and session.current_question_index == question_index do
+      {:noreply, load_scores(socket, session, question_index)}
+    else
+      {:noreply, socket}
+    end
+  end
+
   @impl true
   def handle_info(_msg, socket) do
     {:noreply, socket}
@@ -150,7 +165,10 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
     if participant.is_facilitator do
       case Sessions.advance_to_scoring(session) do
         {:ok, updated_session} ->
-          {:noreply, assign(socket, session: updated_session)}
+          {:noreply,
+           socket
+           |> assign(session: updated_session)
+           |> load_scoring_data(updated_session, participant)}
 
         {:error, _} ->
           {:noreply, put_flash(socket, :error, "Failed to advance to scoring")}
@@ -158,6 +176,179 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
     else
       {:noreply, socket}
     end
+  end
+
+  @impl true
+  def handle_event("select_score", params, socket) do
+    score = params["score"] || params["value"]
+
+    int_value = cond do
+      is_integer(score) -> score
+      is_binary(score) and score != "" -> String.to_integer(score)
+      true -> nil
+    end
+
+    if int_value do
+      {:noreply, assign(socket, selected_value: int_value)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("submit_score", _params, socket) do
+    session = socket.assigns.session
+    participant = socket.assigns.participant
+    selected_value = socket.assigns.selected_value
+    question_index = session.current_question_index
+
+    if selected_value do
+      case Scoring.submit_score(session, participant, question_index, selected_value) do
+        {:ok, _score} ->
+          # Check if all participants have scored
+          all_scored = Scoring.all_scored?(session, question_index)
+
+          if all_scored do
+            Scoring.reveal_scores(session, question_index)
+          end
+
+          # Broadcast score update to other participants
+          Phoenix.PubSub.broadcast(
+            ProductiveWorkgroups.PubSub,
+            Sessions.session_topic(session),
+            {:score_submitted, participant.id, question_index}
+          )
+
+          {:noreply,
+           socket
+           |> assign(my_score: selected_value)
+           |> assign(has_submitted: true)
+           |> load_scores(session, question_index)}
+
+        {:error, _} ->
+          {:noreply, put_flash(socket, :error, "Failed to submit score")}
+      end
+    else
+      {:noreply, put_flash(socket, :error, "Please select a score first")}
+    end
+  end
+
+  @impl true
+  def handle_event("mark_ready", _params, socket) do
+    participant = socket.assigns.participant
+
+    case Sessions.set_participant_ready(participant, true) do
+      {:ok, updated_participant} ->
+        {:noreply, assign(socket, participant: updated_participant)}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Failed to mark as ready")}
+    end
+  end
+
+  @impl true
+  def handle_event("next_question", _params, socket) do
+    session = socket.assigns.session
+    participant = socket.assigns.participant
+
+    if participant.is_facilitator do
+      # Reset all ready states first
+      Sessions.reset_all_ready(session)
+
+      # Check if we need to go to summary or next question
+      template = Workshops.get_template_with_questions(session.template_id)
+      total_questions = length(template.questions)
+
+      if session.current_question_index + 1 >= total_questions do
+        # Last question - go to summary
+        case Sessions.advance_to_summary(session) do
+          {:ok, updated_session} ->
+            {:noreply, assign(socket, session: updated_session)}
+
+          {:error, _} ->
+            {:noreply, put_flash(socket, :error, "Failed to advance to summary")}
+        end
+      else
+        # More questions - advance to next
+        case Sessions.advance_question(session) do
+          {:ok, updated_session} ->
+            {:noreply,
+             socket
+             |> assign(session: updated_session)
+             |> load_scoring_data(updated_session, participant)}
+
+          {:error, _} ->
+            {:noreply, put_flash(socket, :error, "Failed to advance to next question")}
+        end
+      end
+    else
+      {:noreply, socket}
+    end
+  end
+
+  # Scoring data helpers
+
+  defp load_scoring_data(socket, session, participant) do
+    if session.state == "scoring" do
+      template = Workshops.get_template_with_questions(session.template_id)
+      question_index = session.current_question_index
+      question = Enum.find(template.questions, &(&1.index == question_index))
+
+      my_score = Scoring.get_score(session, participant, question_index)
+
+      socket
+      |> assign(template: template)
+      |> assign(current_question: question)
+      |> assign(selected_value: if(my_score, do: my_score.value, else: nil))
+      |> assign(my_score: if(my_score, do: my_score.value, else: nil))
+      |> assign(has_submitted: my_score != nil)
+      |> load_scores(session, question_index)
+    else
+      socket
+      |> assign(template: nil)
+      |> assign(current_question: nil)
+      |> assign(selected_value: nil)
+      |> assign(my_score: nil)
+      |> assign(has_submitted: false)
+      |> assign(all_scores: [])
+      |> assign(scores_revealed: false)
+      |> assign(score_count: 0)
+      |> assign(active_participant_count: 0)
+    end
+  end
+
+  defp load_scores(socket, session, question_index) do
+    scores = Scoring.list_scores_for_question(session, question_index)
+    all_scored = Scoring.all_scored?(session, question_index)
+    participants = socket.assigns.participants
+
+    active_count =
+      Enum.count(participants, fn p -> p.status == "active" end)
+
+    # Get scores with participant names
+    scores_with_names =
+      Enum.map(scores, fn score ->
+        participant = Enum.find(participants, &(&1.id == score.participant_id))
+
+        %{
+          value: score.value,
+          participant_name: if(participant, do: participant.name, else: "Unknown"),
+          participant_id: score.participant_id,
+          color: get_score_color(socket.assigns[:current_question], score.value)
+        }
+      end)
+
+    socket
+    |> assign(all_scores: scores_with_names)
+    |> assign(scores_revealed: all_scored)
+    |> assign(score_count: length(scores))
+    |> assign(active_participant_count: active_count)
+  end
+
+  defp get_score_color(nil, _value), do: :gray
+
+  defp get_score_color(question, value) do
+    Scoring.traffic_light_color(question.scale_type, value, question.optimal_value)
   end
 
   @impl true
@@ -437,10 +628,266 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
 
   defp render_scoring(assigns) do
     ~H"""
-    <div class="flex flex-col items-center justify-center min-h-screen px-4">
-      <div class="max-w-2xl w-full text-center">
-        <h1 class="text-3xl font-bold text-white mb-4">Scoring Phase</h1>
-        <p class="text-gray-400">Scoring interface coming soon...</p>
+    <div class="flex flex-col items-center min-h-screen px-4 py-8">
+      <div class="max-w-2xl w-full">
+        <!-- Progress indicator -->
+        <div class="mb-6">
+          <div class="flex justify-between items-center text-sm text-gray-400 mb-2">
+            <span>Question {@session.current_question_index + 1} of 8</span>
+            <span>{@score_count}/{@active_participant_count} submitted</span>
+          </div>
+          <div class="w-full bg-gray-700 rounded-full h-2">
+            <div
+              class="bg-green-500 h-2 rounded-full transition-all duration-300"
+              style={"width: #{(@session.current_question_index + 1) / 8 * 100}%"}
+            />
+          </div>
+        </div>
+
+        <!-- Question card -->
+        <div class="bg-gray-800 rounded-lg p-6 mb-6">
+          <div class="text-sm text-green-400 mb-2">{@current_question.criterion_name}</div>
+          <h1 class="text-2xl font-bold text-white mb-4">{@current_question.title}</h1>
+          <p class="text-gray-300 whitespace-pre-line">{@current_question.explanation}</p>
+        </div>
+
+        <%= if @scores_revealed do %>
+          {render_score_results(assigns)}
+        <% else %>
+          {render_score_input(assigns)}
+        <% end %>
+      </div>
+    </div>
+    """
+  end
+
+  defp render_score_input(assigns) do
+    ~H"""
+    <div class="bg-gray-800 rounded-lg p-6 mb-6">
+      <h2 class="text-lg font-semibold text-white mb-4">
+        <%= if @has_submitted do %>
+          Score Submitted - Waiting for others...
+        <% else %>
+          Select Your Score
+        <% end %>
+      </h2>
+
+      <%= if @current_question.scale_type == "balance" do %>
+        {render_balance_scale(assigns)}
+      <% else %>
+        {render_maximal_scale(assigns)}
+      <% end %>
+
+      <%= if not @has_submitted do %>
+        <button
+          phx-click="submit_score"
+          disabled={@selected_value == nil}
+          class={[
+            "w-full mt-6 px-6 py-3 font-semibold rounded-lg transition-colors",
+            if(@selected_value != nil,
+              do: "bg-green-600 hover:bg-green-700 text-white",
+              else: "bg-gray-600 text-gray-400 cursor-not-allowed"
+            )
+          ]}
+        >
+          Submit Score
+        </button>
+      <% else %>
+        <div class="mt-6 text-center">
+          <div class="inline-flex items-center gap-2 text-gray-400">
+            <div class="animate-pulse w-2 h-2 bg-green-500 rounded-full" />
+            Waiting for {@active_participant_count - @score_count} more participant(s)...
+          </div>
+        </div>
+      <% end %>
+    </div>
+    """
+  end
+
+  defp render_balance_scale(assigns) do
+    ~H"""
+    <div class="space-y-4">
+      <div class="flex justify-between text-sm text-gray-400">
+        <span>Too little</span>
+        <span>Just right</span>
+        <span>Too much</span>
+      </div>
+
+      <div class="flex gap-1">
+        <%= for v <- -5..5 do %>
+          <button
+            type="button"
+            phx-click="select_score"
+            phx-value-score={v}
+            class={[
+              "flex-1 min-w-0 py-3 rounded-lg font-semibold text-sm transition-all cursor-pointer",
+              cond do
+                @selected_value == v -> "bg-green-500 text-white"
+                v == 0 -> "bg-gray-600 text-white hover:bg-gray-500"
+                true -> "bg-gray-700 text-gray-300 hover:bg-gray-600"
+              end
+            ]}
+          >
+            <%= if v > 0 do %>+{v}<% else %>{v}<% end %>
+          </button>
+        <% end %>
+      </div>
+
+      <div class="flex justify-between text-xs text-gray-500">
+        <span>-5</span>
+        <span class="text-green-400">0 = optimal</span>
+        <span>+5</span>
+      </div>
+    </div>
+    """
+  end
+
+  defp render_maximal_scale(assigns) do
+    ~H"""
+    <div class="space-y-4">
+      <div class="flex justify-between text-sm text-gray-400">
+        <span>Low</span>
+        <span>High</span>
+      </div>
+
+      <div class="flex gap-1">
+        <%= for v <- 0..10 do %>
+          <button
+            type="button"
+            phx-click="select_score"
+            phx-value-score={v}
+            class={[
+              "flex-1 min-w-0 py-3 rounded-lg font-semibold text-sm transition-all cursor-pointer",
+              cond do
+                @selected_value == v -> "bg-green-500 text-white"
+                v >= 7 -> "bg-gray-600 text-white hover:bg-gray-500"
+                true -> "bg-gray-700 text-gray-300 hover:bg-gray-600"
+              end
+            ]}
+          >
+            {v}
+          </button>
+        <% end %>
+      </div>
+
+      <div class="flex justify-between text-xs text-gray-500">
+        <span>0</span>
+        <span class="text-green-400">10 = best</span>
+      </div>
+    </div>
+    """
+  end
+
+  defp render_score_results(assigns) do
+    # Calculate summary
+    values = Enum.map(assigns.all_scores, & &1.value)
+
+    average =
+      if length(values) > 0,
+        do: Float.round(Enum.sum(values) / length(values), 1),
+        else: 0
+
+    assigns =
+      assigns
+      |> Map.put(:average, average)
+      |> Map.put(:average_color, get_score_color(assigns.current_question, round(average)))
+
+    ~H"""
+    <div class="space-y-6">
+      <!-- Results summary -->
+      <div class="bg-gray-800 rounded-lg p-6">
+        <h2 class="text-lg font-semibold text-white mb-4">Results</h2>
+
+        <!-- Team average -->
+        <div class="text-center mb-6">
+          <div class="text-sm text-gray-400 mb-1">Team Average</div>
+          <div class={[
+            "text-4xl font-bold",
+            case @average_color do
+              :green -> "text-green-400"
+              :amber -> "text-yellow-400"
+              :red -> "text-red-400"
+              _ -> "text-gray-400"
+            end
+          ]}>
+            <%= if @current_question.scale_type == "balance" and @average > 0 do %>+<% end %>{@average}
+          </div>
+        </div>
+
+        <!-- Individual scores -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <%= for score <- @all_scores do %>
+            <div class={[
+              "rounded-lg p-3 text-center",
+              case score.color do
+                :green -> "bg-green-900/50 border border-green-700"
+                :amber -> "bg-yellow-900/50 border border-yellow-700"
+                :red -> "bg-red-900/50 border border-red-700"
+                _ -> "bg-gray-700"
+              end
+            ]}>
+              <div class={[
+                "text-2xl font-bold",
+                case score.color do
+                  :green -> "text-green-400"
+                  :amber -> "text-yellow-400"
+                  :red -> "text-red-400"
+                  _ -> "text-gray-400"
+                end
+              ]}>
+                <%= if @current_question.scale_type == "balance" and score.value > 0 do %>+<% end %>{score.value}
+              </div>
+              <div class="text-sm text-gray-400 truncate">{score.participant_name}</div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
+      <!-- Discussion prompts -->
+      <%= if length(@current_question.discussion_prompts) > 0 do %>
+        <div class="bg-gray-800 rounded-lg p-6">
+          <h2 class="text-lg font-semibold text-white mb-4">Discussion Prompts</h2>
+          <ul class="space-y-3">
+            <%= for prompt <- @current_question.discussion_prompts do %>
+              <li class="flex gap-3 text-gray-300">
+                <span class="text-green-400">•</span>
+                <span>{prompt}</span>
+              </li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+
+      <!-- Ready / Next controls -->
+      <div class="bg-gray-800 rounded-lg p-6">
+        <%= if @participant.is_facilitator do %>
+          <button
+            phx-click="next_question"
+            class="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors"
+          >
+            <%= if @session.current_question_index + 1 >= 8 do %>
+              Continue to Summary →
+            <% else %>
+              Next Question →
+            <% end %>
+          </button>
+          <p class="text-center text-gray-500 text-sm mt-2">
+            As facilitator, advance when the team is ready.
+          </p>
+        <% else %>
+          <%= if @participant.is_ready do %>
+            <div class="text-center text-gray-400">
+              <span class="text-green-400">✓</span> You're ready. Waiting for facilitator...
+            </div>
+          <% else %>
+            <button
+              phx-click="mark_ready"
+              class="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors"
+            >
+              I'm Ready to Continue
+            </button>
+          <% end %>
+        <% end %>
       </div>
     </div>
     """
