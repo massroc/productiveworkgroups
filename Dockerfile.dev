@@ -1,5 +1,5 @@
 # Development Dockerfile for Elixir/Phoenix with hot reloading
-FROM elixir:1.18-otp-27-slim
+FROM elixir:1.19.4-otp-28-slim
 
 # Install build dependencies, Node.js, and Chrome for E2E tests
 RUN apt-get update && apt-get install -y \
