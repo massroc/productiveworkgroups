@@ -9,7 +9,7 @@ defmodule ProductiveWorkgroups.Scoring.Score do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias ProductiveWorkgroups.Sessions.{Session, Participant}
+  alias ProductiveWorkgroups.Sessions.{Participant, Session}
 
   schema "scores" do
     field :question_index, :integer

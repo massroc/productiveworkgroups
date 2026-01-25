@@ -7,8 +7,9 @@ defmodule ProductiveWorkgroups.Sessions do
   """
 
   import Ecto.Query, warn: false
+
   alias ProductiveWorkgroups.Repo
-  alias ProductiveWorkgroups.Sessions.{Session, Participant}
+  alias ProductiveWorkgroups.Sessions.{Participant, Session}
   alias ProductiveWorkgroups.Workshops.Template
 
   @pubsub ProductiveWorkgroups.PubSub

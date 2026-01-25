@@ -9,8 +9,9 @@ defmodule ProductiveWorkgroups.Facilitation do
   """
 
   import Ecto.Query, warn: false
-  alias ProductiveWorkgroups.Repo
+
   alias ProductiveWorkgroups.Facilitation.Timer
+  alias ProductiveWorkgroups.Repo
   alias ProductiveWorkgroups.Sessions.Session
 
   ## Suggested Durations (in seconds)

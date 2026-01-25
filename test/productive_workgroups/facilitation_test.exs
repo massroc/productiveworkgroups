@@ -3,7 +3,7 @@ defmodule ProductiveWorkgroups.FacilitationTest do
 
   alias ProductiveWorkgroups.Facilitation
   alias ProductiveWorkgroups.Facilitation.Timer
-  alias ProductiveWorkgroups.{Workshops, Sessions}
+  alias ProductiveWorkgroups.{Sessions, Workshops}
 
   describe "timers" do
     setup do

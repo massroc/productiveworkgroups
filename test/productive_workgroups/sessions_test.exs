@@ -2,7 +2,7 @@ defmodule ProductiveWorkgroups.SessionsTest do
   use ProductiveWorkgroups.DataCase, async: true
 
   alias ProductiveWorkgroups.Sessions
-  alias ProductiveWorkgroups.Sessions.{Session, Participant}
+  alias ProductiveWorkgroups.Sessions.{Participant, Session}
   alias ProductiveWorkgroups.Workshops
 
   describe "sessions" do

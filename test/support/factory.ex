@@ -21,11 +21,11 @@ defmodule ProductiveWorkgroups.Factory do
 
   use ExMachina.Ecto, repo: ProductiveWorkgroups.Repo
 
-  alias ProductiveWorkgroups.Workshops.{Template, Question}
-  alias ProductiveWorkgroups.Sessions.{Session, Participant}
-  alias ProductiveWorkgroups.Scoring.Score
-  alias ProductiveWorkgroups.Notes.{Note, Action}
   alias ProductiveWorkgroups.Facilitation.Timer
+  alias ProductiveWorkgroups.Notes.{Action, Note}
+  alias ProductiveWorkgroups.Scoring.Score
+  alias ProductiveWorkgroups.Sessions.{Participant, Session}
+  alias ProductiveWorkgroups.Workshops.{Question, Template}
 
   @doc """
   Generate a unique session code.

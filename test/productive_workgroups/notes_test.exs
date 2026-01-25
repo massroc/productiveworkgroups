@@ -2,8 +2,8 @@ defmodule ProductiveWorkgroups.NotesTest do
   use ProductiveWorkgroups.DataCase, async: true
 
   alias ProductiveWorkgroups.Notes
-  alias ProductiveWorkgroups.Notes.{Note, Action}
-  alias ProductiveWorkgroups.{Workshops, Sessions}
+  alias ProductiveWorkgroups.Notes.{Action, Note}
+  alias ProductiveWorkgroups.{Sessions, Workshops}
 
   describe "notes" do
     setup do

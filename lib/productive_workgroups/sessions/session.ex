@@ -19,8 +19,8 @@ defmodule ProductiveWorkgroups.Sessions.Session do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias ProductiveWorkgroups.Workshops.Template
   alias ProductiveWorkgroups.Sessions.Participant
+  alias ProductiveWorkgroups.Workshops.Template
 
   @states ~w(lobby intro scoring summary actions completed)
 

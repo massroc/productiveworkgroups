@@ -2,7 +2,7 @@ defmodule ProductiveWorkgroups.WorkshopsTest do
   use ProductiveWorkgroups.DataCase, async: true
 
   alias ProductiveWorkgroups.Workshops
-  alias ProductiveWorkgroups.Workshops.{Template, Question}
+  alias ProductiveWorkgroups.Workshops.{Question, Template}
 
   describe "templates" do
     @valid_attrs %{

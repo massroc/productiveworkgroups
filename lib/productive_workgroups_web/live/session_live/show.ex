@@ -4,8 +4,8 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
   """
   use ProductiveWorkgroupsWeb, :live_view
 
-  alias ProductiveWorkgroups.Sessions
   alias ProductiveWorkgroups.Scoring
+  alias ProductiveWorkgroups.Sessions
   alias ProductiveWorkgroups.Workshops
 
   @impl true
@@ -20,39 +20,36 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
          |> redirect(to: ~p"/")}
 
       workshop_session ->
-        if browser_token do
-          participant = Sessions.get_participant_by_token(workshop_session, browser_token)
-
-          if participant do
-            if connected?(socket) do
-              # Subscribe to session updates
-              Sessions.subscribe(workshop_session)
-            end
-
-            # Load all participants for the lobby
-            participants = Sessions.list_participants(workshop_session)
-
-            {:ok,
-             socket
-             |> assign(page_title: "Workshop Session")
-             |> assign(session: workshop_session)
-             |> assign(participant: participant)
-             |> assign(participants: participants)
-             |> assign(intro_step: 1)
-             |> load_scoring_data(workshop_session, participant)}
-          else
-            # Browser token doesn't match any participant - redirect to join
-            {:ok,
-             socket
-             |> redirect(to: ~p"/session/#{code}/join")}
-          end
-        else
-          # No browser token - redirect to join
-          {:ok,
-           socket
-           |> redirect(to: ~p"/session/#{code}/join")}
-        end
+        mount_with_session(socket, workshop_session, browser_token, code)
     end
+  end
+
+  defp mount_with_session(socket, workshop_session, nil, code) do
+    {:ok, redirect(socket, to: ~p"/session/#{code}/join")}
+  end
+
+  defp mount_with_session(socket, workshop_session, browser_token, code) do
+    participant = Sessions.get_participant_by_token(workshop_session, browser_token)
+    mount_with_participant(socket, workshop_session, participant, code)
+  end
+
+  defp mount_with_participant(socket, _workshop_session, nil, code) do
+    {:ok, redirect(socket, to: ~p"/session/#{code}/join")}
+  end
+
+  defp mount_with_participant(socket, workshop_session, participant, _code) do
+    if connected?(socket), do: Sessions.subscribe(workshop_session)
+
+    participants = Sessions.list_participants(workshop_session)
+
+    {:ok,
+     socket
+     |> assign(page_title: "Workshop Session")
+     |> assign(session: workshop_session)
+     |> assign(participant: participant)
+     |> assign(participants: participants)
+     |> assign(intro_step: 1)
+     |> load_scoring_data(workshop_session, participant)}
   end
 
   @impl true
@@ -198,40 +195,46 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
 
   @impl true
   def handle_event("submit_score", _params, socket) do
+    submit_score(socket, socket.assigns.selected_value)
+  end
+
+  defp submit_score(socket, nil) do
+    {:noreply, put_flash(socket, :error, "Please select a score first")}
+  end
+
+  defp submit_score(socket, selected_value) do
     session = socket.assigns.session
     participant = socket.assigns.participant
-    selected_value = socket.assigns.selected_value
     question_index = session.current_question_index
 
-    if selected_value do
-      case Scoring.submit_score(session, participant, question_index, selected_value) do
-        {:ok, _score} ->
-          # Check if all participants have scored
-          all_scored = Scoring.all_scored?(session, question_index)
+    case Scoring.submit_score(session, participant, question_index, selected_value) do
+      {:ok, _score} ->
+        maybe_reveal_scores(session, question_index)
+        broadcast_score_update(session, participant.id, question_index)
 
-          if all_scored do
-            Scoring.reveal_scores(session, question_index)
-          end
+        {:noreply,
+         socket
+         |> assign(my_score: selected_value)
+         |> assign(has_submitted: true)
+         |> load_scores(session, question_index)}
 
-          # Broadcast score update to other participants
-          Phoenix.PubSub.broadcast(
-            ProductiveWorkgroups.PubSub,
-            Sessions.session_topic(session),
-            {:score_submitted, participant.id, question_index}
-          )
-
-          {:noreply,
-           socket
-           |> assign(my_score: selected_value)
-           |> assign(has_submitted: true)
-           |> load_scores(session, question_index)}
-
-        {:error, _} ->
-          {:noreply, put_flash(socket, :error, "Failed to submit score")}
-      end
-    else
-      {:noreply, put_flash(socket, :error, "Please select a score first")}
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Failed to submit score")}
     end
+  end
+
+  defp maybe_reveal_scores(session, question_index) do
+    if Scoring.all_scored?(session, question_index) do
+      Scoring.reveal_scores(session, question_index)
+    end
+  end
+
+  defp broadcast_score_update(session, participant_id, question_index) do
+    Phoenix.PubSub.broadcast(
+      ProductiveWorkgroups.PubSub,
+      Sessions.session_topic(session),
+      {:score_submitted, participant_id, question_index}
+    )
   end
 
   @impl true
@@ -249,41 +252,43 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
 
   @impl true
   def handle_event("next_question", _params, socket) do
+    advance_to_next_question(socket, socket.assigns.participant.is_facilitator)
+  end
+
+  defp advance_to_next_question(socket, false), do: {:noreply, socket}
+
+  defp advance_to_next_question(socket, true) do
     session = socket.assigns.session
+    Sessions.reset_all_ready(session)
+
+    template = Workshops.get_template_with_questions(session.template_id)
+    is_last_question = session.current_question_index + 1 >= length(template.questions)
+
+    do_advance(socket, session, is_last_question)
+  end
+
+  defp do_advance(socket, session, true) do
+    case Sessions.advance_to_summary(session) do
+      {:ok, updated_session} ->
+        {:noreply, assign(socket, session: updated_session)}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Failed to advance to summary")}
+    end
+  end
+
+  defp do_advance(socket, session, false) do
     participant = socket.assigns.participant
 
-    if participant.is_facilitator do
-      # Reset all ready states first
-      Sessions.reset_all_ready(session)
+    case Sessions.advance_question(session) do
+      {:ok, updated_session} ->
+        {:noreply,
+         socket
+         |> assign(session: updated_session)
+         |> load_scoring_data(updated_session, participant)}
 
-      # Check if we need to go to summary or next question
-      template = Workshops.get_template_with_questions(session.template_id)
-      total_questions = length(template.questions)
-
-      if session.current_question_index + 1 >= total_questions do
-        # Last question - go to summary
-        case Sessions.advance_to_summary(session) do
-          {:ok, updated_session} ->
-            {:noreply, assign(socket, session: updated_session)}
-
-          {:error, _} ->
-            {:noreply, put_flash(socket, :error, "Failed to advance to summary")}
-        end
-      else
-        # More questions - advance to next
-        case Sessions.advance_question(session) do
-          {:ok, updated_session} ->
-            {:noreply,
-             socket
-             |> assign(session: updated_session)
-             |> load_scoring_data(updated_session, participant)}
-
-          {:error, _} ->
-            {:noreply, put_flash(socket, :error, "Failed to advance to next question")}
-        end
-      end
-    else
-      {:noreply, socket}
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Failed to advance to next question")}
     end
   end
 
@@ -350,6 +355,12 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
 
   defp get_score_color(question, value) do
     Scoring.traffic_light_color(question.scale_type, value, question.optimal_value)
+  end
+
+  defp calculate_average([]), do: 0
+
+  defp calculate_average(values) do
+    Float.round(Enum.sum(values) / length(values), 1)
   end
 
   @impl true
@@ -786,11 +797,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
   defp render_score_results(assigns) do
     # Calculate summary
     values = Enum.map(assigns.all_scores, & &1.value)
-
-    average =
-      if length(values) > 0,
-        do: Float.round(Enum.sum(values) / length(values), 1),
-        else: 0
+    average = calculate_average(values)
 
     assigns =
       assigns

@@ -7,8 +7,9 @@ defmodule ProductiveWorkgroups.Notes do
   """
 
   import Ecto.Query, warn: false
+
+  alias ProductiveWorkgroups.Notes.{Action, Note}
   alias ProductiveWorkgroups.Repo
-  alias ProductiveWorkgroups.Notes.{Note, Action}
   alias ProductiveWorkgroups.Sessions.Session
 
   ## Notes

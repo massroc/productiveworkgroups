@@ -2,7 +2,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLiveTest do
   use ProductiveWorkgroupsWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
-  alias ProductiveWorkgroups.{Workshops, Sessions}
+  alias ProductiveWorkgroups.{Sessions, Workshops}
 
   describe "SessionLive.New" do
     setup do

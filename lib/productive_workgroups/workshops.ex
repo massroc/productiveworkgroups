@@ -7,8 +7,9 @@ defmodule ProductiveWorkgroups.Workshops do
   """
 
   import Ecto.Query, warn: false
+
   alias ProductiveWorkgroups.Repo
-  alias ProductiveWorkgroups.Workshops.{Template, Question}
+  alias ProductiveWorkgroups.Workshops.{Question, Template}
 
   ## Templates
 

@@ -3,7 +3,7 @@ defmodule ProductiveWorkgroups.ScoringTest do
 
   alias ProductiveWorkgroups.Scoring
   alias ProductiveWorkgroups.Scoring.Score
-  alias ProductiveWorkgroups.{Workshops, Sessions}
+  alias ProductiveWorkgroups.{Sessions, Workshops}
 
   describe "scores" do
     setup do

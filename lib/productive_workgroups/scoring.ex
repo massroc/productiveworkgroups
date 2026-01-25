@@ -7,9 +7,10 @@ defmodule ProductiveWorkgroups.Scoring do
   """
 
   import Ecto.Query, warn: false
+
   alias ProductiveWorkgroups.Repo
   alias ProductiveWorkgroups.Scoring.Score
-  alias ProductiveWorkgroups.Sessions.{Session, Participant}
+  alias ProductiveWorkgroups.Sessions.{Participant, Session}
   alias ProductiveWorkgroups.Workshops
   alias ProductiveWorkgroups.Workshops.Template
 
