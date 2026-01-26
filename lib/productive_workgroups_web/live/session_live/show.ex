@@ -25,7 +25,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
     end
   end
 
-  defp mount_with_session(socket, workshop_session, nil, code) do
+  defp mount_with_session(socket, _workshop_session, nil, code) do
     {:ok, redirect(socket, to: ~p"/session/#{code}/join")}
   end
 
@@ -52,7 +52,12 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
      |> assign(intro_step: 1)
      |> assign(show_mid_transition: false)
      |> assign(note_input: "")
-     |> load_scoring_data(workshop_session, participant)}
+     |> assign(action_description: "")
+     |> assign(action_owner: "")
+     |> assign(action_question: nil)
+     |> load_scoring_data(workshop_session, participant)
+     |> load_summary_data(workshop_session)
+     |> load_actions_data(workshop_session)}
   end
 
   @impl true
@@ -102,7 +107,33 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
 
   @impl true
   def handle_info({:session_updated, session}, socket) do
-    {:noreply, assign(socket, session: session)}
+    old_state = socket.assigns.session.state
+
+    socket =
+      socket
+      |> assign(session: session)
+
+    # Reload data when transitioning to new phases
+    socket =
+      cond do
+        old_state != "summary" and session.state == "summary" ->
+          load_summary_data(socket, session)
+
+        old_state != "actions" and session.state == "actions" ->
+          socket
+          |> load_summary_data(session)
+          |> load_actions_data(session)
+
+        old_state != "completed" and session.state == "completed" ->
+          socket
+          |> load_summary_data(session)
+          |> load_actions_data(session)
+
+        true ->
+          socket
+      end
+
+    {:noreply, socket}
   end
 
   # Handle score submission broadcast from other participants
@@ -124,6 +155,18 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
 
     if session.state == "scoring" and session.current_question_index == question_index do
       {:noreply, load_notes(socket, session, question_index)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  # Handle action updates from other participants
+  @impl true
+  def handle_info({:action_updated, _action_id}, socket) do
+    session = socket.assigns.session
+
+    if session.state in ["actions", "completed"] do
+      {:noreply, load_actions_data(socket, session)}
     else
       {:noreply, socket}
     end
@@ -210,46 +253,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
 
   @impl true
   def handle_event("submit_score", _params, socket) do
-    submit_score(socket, socket.assigns.selected_value)
-  end
-
-  defp submit_score(socket, nil) do
-    {:noreply, put_flash(socket, :error, "Please select a score first")}
-  end
-
-  defp submit_score(socket, selected_value) do
-    session = socket.assigns.session
-    participant = socket.assigns.participant
-    question_index = session.current_question_index
-
-    case Scoring.submit_score(session, participant, question_index, selected_value) do
-      {:ok, _score} ->
-        maybe_reveal_scores(session, question_index)
-        broadcast_score_update(session, participant.id, question_index)
-
-        {:noreply,
-         socket
-         |> assign(my_score: selected_value)
-         |> assign(has_submitted: true)
-         |> load_scores(session, question_index)}
-
-      {:error, _} ->
-        {:noreply, put_flash(socket, :error, "Failed to submit score")}
-    end
-  end
-
-  defp maybe_reveal_scores(session, question_index) do
-    if Scoring.all_scored?(session, question_index) do
-      Scoring.reveal_scores(session, question_index)
-    end
-  end
-
-  defp broadcast_score_update(session, participant_id, question_index) do
-    Phoenix.PubSub.broadcast(
-      ProductiveWorkgroups.PubSub,
-      Sessions.session_topic(session),
-      {:score_submitted, participant_id, question_index}
-    )
+    do_submit_score(socket, socket.assigns.selected_value)
   end
 
   @impl true
@@ -320,6 +324,195 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
     end
   end
 
+  @impl true
+  def handle_event("continue_past_transition", _params, socket) do
+    {:noreply, assign(socket, show_mid_transition: false)}
+  end
+
+  @impl true
+  def handle_event("next_question", _params, socket) do
+    do_advance_to_next_question(socket, socket.assigns.participant.is_facilitator)
+  end
+
+  @impl true
+  def handle_event("continue_to_actions", _params, socket) do
+    session = socket.assigns.session
+    participant = socket.assigns.participant
+
+    if participant.is_facilitator do
+      case Sessions.advance_to_actions(session) do
+        {:ok, updated_session} ->
+          {:noreply,
+           socket
+           |> assign(session: updated_session)
+           |> load_actions_data(updated_session)}
+
+        {:error, _} ->
+          {:noreply, put_flash(socket, :error, "Failed to advance to actions")}
+      end
+    else
+      {:noreply, socket}
+    end
+  end
+
+  # Action handling events
+  @impl true
+  def handle_event("update_action_description", %{"value" => value}, socket) do
+    {:noreply, assign(socket, action_description: value)}
+  end
+
+  @impl true
+  def handle_event("update_action_owner", %{"value" => value}, socket) do
+    {:noreply, assign(socket, action_owner: value)}
+  end
+
+  @impl true
+  def handle_event("update_action_question", %{"value" => value}, socket) do
+    question_index =
+      case value do
+        "" -> nil
+        v -> String.to_integer(v)
+      end
+
+    {:noreply, assign(socket, action_question: question_index)}
+  end
+
+  @impl true
+  def handle_event("create_action", _params, socket) do
+    description = String.trim(socket.assigns.action_description)
+
+    if description == "" do
+      {:noreply, put_flash(socket, :error, "Please enter an action description")}
+    else
+      session = socket.assigns.session
+      question_index = socket.assigns.action_question
+
+      attrs = %{
+        description: description,
+        owner_name: String.trim(socket.assigns.action_owner)
+      }
+
+      case Notes.create_action(session, question_index, attrs) do
+        {:ok, action} ->
+          broadcast_action_update(session, action.id)
+
+          {:noreply,
+           socket
+           |> assign(action_description: "")
+           |> assign(action_owner: "")
+           |> assign(action_question: nil)
+           |> load_actions_data(session)}
+
+        {:error, _} ->
+          {:noreply, put_flash(socket, :error, "Failed to create action")}
+      end
+    end
+  end
+
+  @impl true
+  def handle_event("toggle_action", %{"id" => action_id}, socket) do
+    session = socket.assigns.session
+    action = Enum.find(socket.assigns.all_actions, &(&1.id == action_id))
+
+    if action do
+      result =
+        if action.completed do
+          Notes.uncomplete_action(action)
+        else
+          Notes.complete_action(action)
+        end
+
+      case result do
+        {:ok, _} ->
+          broadcast_action_update(session, action_id)
+          {:noreply, load_actions_data(socket, session)}
+
+        {:error, _} ->
+          {:noreply, put_flash(socket, :error, "Failed to update action")}
+      end
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("delete_action", %{"id" => action_id}, socket) do
+    session = socket.assigns.session
+    action = Enum.find(socket.assigns.all_actions, &(&1.id == action_id))
+
+    if action do
+      case Notes.delete_action(action) do
+        {:ok, _} ->
+          broadcast_action_update(session, action_id)
+          {:noreply, load_actions_data(socket, session)}
+
+        {:error, _} ->
+          {:noreply, put_flash(socket, :error, "Failed to delete action")}
+      end
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("finish_workshop", _params, socket) do
+    session = socket.assigns.session
+    participant = socket.assigns.participant
+
+    if participant.is_facilitator do
+      case Sessions.complete_session(session) do
+        {:ok, updated_session} ->
+          {:noreply, assign(socket, session: updated_session)}
+
+        {:error, _} ->
+          {:noreply, put_flash(socket, :error, "Failed to complete workshop")}
+      end
+    else
+      {:noreply, socket}
+    end
+  end
+
+  # Private helper functions
+
+  defp do_submit_score(socket, nil) do
+    {:noreply, put_flash(socket, :error, "Please select a score first")}
+  end
+
+  defp do_submit_score(socket, selected_value) do
+    session = socket.assigns.session
+    participant = socket.assigns.participant
+    question_index = session.current_question_index
+
+    case Scoring.submit_score(session, participant, question_index, selected_value) do
+      {:ok, _score} ->
+        maybe_reveal_scores(session, question_index)
+        broadcast_score_update(session, participant.id, question_index)
+
+        {:noreply,
+         socket
+         |> assign(my_score: selected_value)
+         |> assign(has_submitted: true)
+         |> load_scores(session, question_index)}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Failed to submit score")}
+    end
+  end
+
+  defp maybe_reveal_scores(session, question_index) do
+    if Scoring.all_scored?(session, question_index) do
+      Scoring.reveal_scores(session, question_index)
+    end
+  end
+
+  defp broadcast_score_update(session, participant_id, question_index) do
+    Phoenix.PubSub.broadcast(
+      ProductiveWorkgroups.PubSub,
+      Sessions.session_topic(session),
+      {:score_submitted, participant_id, question_index}
+    )
+  end
+
   defp broadcast_note_update(session, question_index) do
     Phoenix.PubSub.broadcast(
       ProductiveWorkgroups.PubSub,
@@ -328,20 +521,17 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
     )
   end
 
-  # Mid-workshop transition event
-  @impl true
-  def handle_event("continue_past_transition", _params, socket) do
-    {:noreply, assign(socket, show_mid_transition: false)}
+  defp broadcast_action_update(session, action_id) do
+    Phoenix.PubSub.broadcast(
+      ProductiveWorkgroups.PubSub,
+      Sessions.session_topic(session),
+      {:action_updated, action_id}
+    )
   end
 
-  @impl true
-  def handle_event("next_question", _params, socket) do
-    advance_to_next_question(socket, socket.assigns.participant.is_facilitator)
-  end
+  defp do_advance_to_next_question(socket, false), do: {:noreply, socket}
 
-  defp advance_to_next_question(socket, false), do: {:noreply, socket}
-
-  defp advance_to_next_question(socket, true) do
+  defp do_advance_to_next_question(socket, true) do
     session = socket.assigns.session
     Sessions.reset_all_ready(session)
 
@@ -354,7 +544,10 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
   defp do_advance(socket, session, true) do
     case Sessions.advance_to_summary(session) do
       {:ok, updated_session} ->
-        {:noreply, assign(socket, session: updated_session)}
+        {:noreply,
+         socket
+         |> assign(session: updated_session)
+         |> load_summary_data(updated_session)}
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Failed to advance to summary")}
@@ -445,6 +638,53 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
   defp load_notes(socket, session, question_index) do
     notes = Notes.list_notes_for_question(session, question_index)
     assign(socket, question_notes: notes)
+  end
+
+  defp load_summary_data(socket, session) do
+    if session.state in ["summary", "actions", "completed"] do
+      template = Workshops.get_template_with_questions(session.template_id)
+      scores_summary = Scoring.get_all_scores_summary(session, template)
+      all_notes = Notes.list_all_notes(session)
+
+      # Categorize questions by color for pattern highlighting
+      strengths = Enum.filter(scores_summary, fn s -> s.color == :green end)
+      concerns = Enum.filter(scores_summary, fn s -> s.color == :red end)
+      neutral = Enum.filter(scores_summary, fn s -> s.color == :amber end)
+
+      socket
+      |> assign(summary_template: template)
+      |> assign(scores_summary: scores_summary)
+      |> assign(all_notes: all_notes)
+      |> assign(strengths: strengths)
+      |> assign(concerns: concerns)
+      |> assign(neutral: neutral)
+    else
+      socket
+      |> assign(summary_template: nil)
+      |> assign(scores_summary: [])
+      |> assign(all_notes: [])
+      |> assign(strengths: [])
+      |> assign(concerns: [])
+      |> assign(neutral: [])
+    end
+  end
+
+  defp load_actions_data(socket, session) do
+    if session.state in ["actions", "completed"] do
+      actions = Notes.list_all_actions(session)
+      action_count = length(actions)
+      completed_count = Enum.count(actions, & &1.completed)
+
+      socket
+      |> assign(all_actions: actions)
+      |> assign(action_count: action_count)
+      |> assign(completed_action_count: completed_count)
+    else
+      socket
+      |> assign(all_actions: [])
+      |> assign(action_count: 0)
+      |> assign(completed_action_count: 0)
+    end
   end
 
   defp get_score_color(nil, _value), do: :gray
@@ -1114,32 +1354,573 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
 
   defp render_summary(assigns) do
     ~H"""
-    <div class="flex flex-col items-center justify-center min-h-screen px-4">
-      <div class="max-w-2xl w-full text-center">
-        <h1 class="text-3xl font-bold text-white mb-4">Summary</h1>
-        <p class="text-gray-400">Summary view coming soon...</p>
+    <div class="flex flex-col items-center min-h-screen px-4 py-8">
+      <div class="max-w-4xl w-full">
+        <div class="text-center mb-8">
+          <h1 class="text-3xl font-bold text-white mb-2">Workshop Summary</h1>
+          <p class="text-gray-400">
+            Here's an overview of your team's responses across all eight questions.
+          </p>
+        </div>
+
+        <!-- Pattern Highlighting -->
+        <%= if length(@strengths) > 0 or length(@concerns) > 0 do %>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            <!-- Strengths -->
+            <%= if length(@strengths) > 0 do %>
+              <div class="bg-green-900/30 border border-green-700 rounded-lg p-4">
+                <h3 class="text-lg font-semibold text-green-400 mb-3">
+                  Strengths ({length(@strengths)})
+                </h3>
+                <ul class="space-y-2">
+                  <%= for item <- @strengths do %>
+                    <li class="flex items-center gap-2 text-gray-300">
+                      <span class="text-green-400">✓</span>
+                      <span>{item.title}</span>
+                      <span class="text-green-400 font-semibold ml-auto">
+                        <%= format_score(item.average, item.scale_type) %>
+                      </span>
+                    </li>
+                  <% end %>
+                </ul>
+              </div>
+            <% end %>
+
+            <!-- Concerns -->
+            <%= if length(@concerns) > 0 do %>
+              <div class="bg-red-900/30 border border-red-700 rounded-lg p-4">
+                <h3 class="text-lg font-semibold text-red-400 mb-3">
+                  Areas of Concern ({length(@concerns)})
+                </h3>
+                <ul class="space-y-2">
+                  <%= for item <- @concerns do %>
+                    <li class="flex items-center gap-2 text-gray-300">
+                      <span class="text-red-400">!</span>
+                      <span>{item.title}</span>
+                      <span class="text-red-400 font-semibold ml-auto">
+                        <%= format_score(item.average, item.scale_type) %>
+                      </span>
+                    </li>
+                  <% end %>
+                </ul>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+
+        <!-- All Questions Summary -->
+        <div class="bg-gray-800 rounded-lg p-6 mb-6">
+          <h2 class="text-xl font-semibold text-white mb-4">All Questions</h2>
+          <div class="space-y-4">
+            <%= for score <- @scores_summary do %>
+              <div class={[
+                "rounded-lg p-4 border",
+                case score.color do
+                  :green -> "bg-green-900/20 border-green-700"
+                  :amber -> "bg-yellow-900/20 border-yellow-700"
+                  :red -> "bg-red-900/20 border-red-700"
+                  _ -> "bg-gray-700 border-gray-600"
+                end
+              ]}>
+                <div class="flex items-center justify-between">
+                  <div class="flex-1">
+                    <div class="flex items-center gap-2">
+                      <span class="text-sm text-gray-400">Q{score.question_index + 1}</span>
+                      <h3 class="font-semibold text-white">{score.title}</h3>
+                    </div>
+                    <div class="text-sm text-gray-400 mt-1">
+                      Scale: <%= if score.scale_type == "balance" do %>
+                        Balance (-5 to +5, optimal at 0)
+                      <% else %>
+                        Maximal (0 to 10, higher is better)
+                      <% end %>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <%= if score.average do %>
+                      <div class={[
+                        "text-3xl font-bold",
+                        case score.color do
+                          :green -> "text-green-400"
+                          :amber -> "text-yellow-400"
+                          :red -> "text-red-400"
+                          _ -> "text-gray-400"
+                        end
+                      ]}>
+                        <%= format_score(score.average, score.scale_type) %>
+                      </div>
+                      <div class="text-sm text-gray-400">
+                        {score.count} responses
+                      </div>
+                    <% else %>
+                      <div class="text-gray-500">No scores</div>
+                    <% end %>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+
+        <!-- Notes Summary -->
+        <%= if length(@all_notes) > 0 do %>
+          <div class="bg-gray-800 rounded-lg p-6 mb-6">
+            <h2 class="text-xl font-semibold text-white mb-4">
+              Discussion Notes ({length(@all_notes)})
+            </h2>
+            <ul class="space-y-3">
+              <%= for note <- @all_notes do %>
+                <li class="bg-gray-700 rounded-lg p-3">
+                  <%= if note.question_index do %>
+                    <div class="text-xs text-gray-500 mb-1">
+                      Question {note.question_index + 1}
+                    </div>
+                  <% end %>
+                  <p class="text-gray-300">{note.content}</p>
+                  <p class="text-xs text-gray-500 mt-1">— {note.author_name}</p>
+                </li>
+              <% end %>
+            </ul>
+          </div>
+        <% end %>
+
+        <!-- Continue Button -->
+        <div class="bg-gray-800 rounded-lg p-6">
+          <%= if @participant.is_facilitator do %>
+            <button
+              phx-click="continue_to_actions"
+              class="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors"
+            >
+              Continue to Action Items →
+            </button>
+            <p class="text-center text-gray-500 text-sm mt-2">
+              Next: Capture action items based on your discussion.
+            </p>
+          <% else %>
+            <div class="text-center text-gray-400">
+              Reviewing summary. Waiting for facilitator to continue...
+            </div>
+          <% end %>
+        </div>
       </div>
     </div>
     """
   end
 
+  defp format_score(nil, _scale_type), do: "—"
+
+  defp format_score(value, "balance") do
+    if value > 0, do: "+#{value}", else: "#{value}"
+  end
+
+  defp format_score(value, _scale_type), do: "#{value}"
+
   defp render_actions(assigns) do
+    # Group actions by question
+    grouped_actions = Enum.group_by(assigns.all_actions, & &1.question_index)
+    general_actions = Map.get(grouped_actions, nil, [])
+
+    question_actions =
+      grouped_actions
+      |> Map.drop([nil])
+      |> Enum.sort_by(fn {idx, _} -> idx end)
+
+    assigns =
+      assigns
+      |> Map.put(:general_actions, general_actions)
+      |> Map.put(:question_actions, question_actions)
+
     ~H"""
-    <div class="flex flex-col items-center justify-center min-h-screen px-4">
-      <div class="max-w-2xl w-full text-center">
-        <h1 class="text-3xl font-bold text-white mb-4">Action Items</h1>
-        <p class="text-gray-400">Actions interface coming soon...</p>
+    <div class="flex flex-col items-center min-h-screen px-4 py-8">
+      <div class="max-w-3xl w-full">
+        <div class="text-center mb-8">
+          <h1 class="text-3xl font-bold text-white mb-2">Action Items</h1>
+          <p class="text-gray-400">
+            Capture commitments and next steps from your discussion.
+          </p>
+          <%= if @action_count > 0 do %>
+            <p class="text-sm text-gray-500 mt-2">
+              {@ completed_action_count}/{@action_count} completed
+            </p>
+          <% end %>
+        </div>
+
+        <!-- Create Action Form -->
+        <div class="bg-gray-800 rounded-lg p-6 mb-6">
+          <h2 class="text-lg font-semibold text-white mb-4">Add Action Item</h2>
+          <form phx-submit="create_action" class="space-y-4">
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">What needs to be done?</label>
+              <input
+                type="text"
+                name="description"
+                value={@action_description}
+                phx-change="update_action_description"
+                placeholder="Describe the action..."
+                class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+              />
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm text-gray-400 mb-1">Owner (optional)</label>
+                <input
+                  type="text"
+                  name="owner"
+                  value={@action_owner}
+                  phx-change="update_action_owner"
+                  placeholder="Who will do this?"
+                  class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+                />
+              </div>
+              <div>
+                <label class="block text-sm text-gray-400 mb-1">Related Question (optional)</label>
+                <select
+                  name="question"
+                  phx-change="update_action_question"
+                  class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-green-500"
+                >
+                  <option value="">General action</option>
+                  <%= for score <- @scores_summary do %>
+                    <option value={score.question_index} selected={@action_question == score.question_index}>
+                      Q{score.question_index + 1}: {score.title}
+                    </option>
+                  <% end %>
+                </select>
+              </div>
+            </div>
+            <button
+              type="submit"
+              class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors"
+            >
+              Add Action
+            </button>
+          </form>
+        </div>
+
+        <!-- Existing Actions -->
+        <%= if @action_count > 0 do %>
+          <div class="space-y-6">
+            <!-- General Actions -->
+            <%= if length(@general_actions) > 0 do %>
+              <div class="bg-gray-800 rounded-lg p-6">
+                <h3 class="text-lg font-semibold text-white mb-4">General Actions</h3>
+                <ul class="space-y-3">
+                  <%= for action <- @general_actions do %>
+                    {render_action_item(assigns, action)}
+                  <% end %>
+                </ul>
+              </div>
+            <% end %>
+
+            <!-- Actions by Question -->
+            <%= for {question_index, actions} <- @question_actions do %>
+              <div class="bg-gray-800 rounded-lg p-6">
+                <h3 class="text-lg font-semibold text-white mb-4">
+                  <% question = Enum.find(@scores_summary, fn s -> s.question_index == question_index end) %>
+                  Q{question_index + 1}: <%= if question, do: question.title, else: "Unknown" %>
+                </h3>
+                <ul class="space-y-3">
+                  <%= for action <- actions do %>
+                    {render_action_item(assigns, action)}
+                  <% end %>
+                </ul>
+              </div>
+            <% end %>
+          </div>
+        <% else %>
+          <div class="bg-gray-800 rounded-lg p-6 text-center">
+            <p class="text-gray-400">No action items yet. Add your first action above.</p>
+          </div>
+        <% end %>
+
+        <!-- Finish Workshop Button -->
+        <div class="bg-gray-800 rounded-lg p-6 mt-6">
+          <%= if @participant.is_facilitator do %>
+            <button
+              phx-click="finish_workshop"
+              class="w-full px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors"
+            >
+              Finish Workshop
+            </button>
+            <p class="text-center text-gray-500 text-sm mt-2">
+              Complete the workshop and view the final summary.
+            </p>
+          <% else %>
+            <div class="text-center text-gray-400">
+              Adding action items. Waiting for facilitator to finish workshop...
+            </div>
+          <% end %>
+        </div>
       </div>
     </div>
+    """
+  end
+
+  defp render_action_item(assigns, action) do
+    assigns = Map.put(assigns, :action, action)
+
+    ~H"""
+    <li class={[
+      "rounded-lg p-3 flex items-start gap-3",
+      if(@action.completed, do: "bg-gray-700/50", else: "bg-gray-700")
+    ]}>
+      <button
+        type="button"
+        phx-click="toggle_action"
+        phx-value-id={@action.id}
+        class={[
+          "mt-1 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
+          if(@action.completed,
+            do: "bg-green-600 border-green-600 text-white",
+            else: "border-gray-500 hover:border-green-500"
+          )
+        ]}
+      >
+        <%= if @action.completed do %>
+          <span class="text-xs">✓</span>
+        <% end %>
+      </button>
+      <div class="flex-1">
+        <p class={[
+          "text-gray-300",
+          if(@action.completed, do: "line-through text-gray-500")
+        ]}>
+          {@action.description}
+        </p>
+        <%= if @action.owner_name && @action.owner_name != "" do %>
+          <p class="text-sm text-gray-500 mt-1">Owner: {@action.owner_name}</p>
+        <% end %>
+      </div>
+      <button
+        type="button"
+        phx-click="delete_action"
+        phx-value-id={@action.id}
+        class="text-gray-500 hover:text-red-400 transition-colors text-sm"
+        title="Delete action"
+      >
+        ✕
+      </button>
+    </li>
     """
   end
 
   defp render_completed(assigns) do
+    # Group actions by question for display
+    grouped_actions = Enum.group_by(assigns.all_actions, & &1.question_index)
+    general_actions = Map.get(grouped_actions, nil, [])
+
+    question_actions =
+      grouped_actions
+      |> Map.drop([nil])
+      |> Enum.sort_by(fn {idx, _} -> idx end)
+
+    assigns =
+      assigns
+      |> Map.put(:general_actions, general_actions)
+      |> Map.put(:question_actions, question_actions)
+
     ~H"""
-    <div class="flex flex-col items-center justify-center min-h-screen px-4">
-      <div class="max-w-2xl w-full text-center">
-        <h1 class="text-3xl font-bold text-white mb-4">Workshop Complete</h1>
-        <p class="text-gray-400">Thank you for participating!</p>
+    <div class="flex flex-col items-center min-h-screen px-4 py-8">
+      <div class="max-w-4xl w-full">
+        <!-- Header -->
+        <div class="text-center mb-8">
+          <div class="text-6xl mb-4">🎉</div>
+          <h1 class="text-3xl font-bold text-white mb-2">Workshop Complete!</h1>
+          <p class="text-gray-400">
+            Thank you for participating in the Six Criteria Workshop.
+          </p>
+          <p class="text-sm text-gray-500 mt-2">
+            Session code: <span class="font-mono text-white">{@session.code}</span>
+          </p>
+        </div>
+
+        <!-- Results Summary -->
+        <div class="bg-gray-800 rounded-lg p-6 mb-6">
+          <h2 class="text-xl font-semibold text-white mb-4">Results Overview</h2>
+
+          <!-- Quick Stats -->
+          <div class="grid grid-cols-3 gap-4 mb-6">
+            <div class="text-center">
+              <div class="text-3xl font-bold text-green-400">{length(@strengths)}</div>
+              <div class="text-sm text-gray-400">Strengths</div>
+            </div>
+            <div class="text-center">
+              <div class="text-3xl font-bold text-yellow-400">{length(@neutral)}</div>
+              <div class="text-sm text-gray-400">Neutral</div>
+            </div>
+            <div class="text-center">
+              <div class="text-3xl font-bold text-red-400">{length(@concerns)}</div>
+              <div class="text-sm text-gray-400">Concerns</div>
+            </div>
+          </div>
+
+          <!-- Score Grid -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <%= for score <- @scores_summary do %>
+              <div class={[
+                "rounded-lg p-3 text-center border",
+                case score.color do
+                  :green -> "bg-green-900/30 border-green-700"
+                  :amber -> "bg-yellow-900/30 border-yellow-700"
+                  :red -> "bg-red-900/30 border-red-700"
+                  _ -> "bg-gray-700 border-gray-600"
+                end
+              ]}>
+                <div class="text-xs text-gray-400 mb-1">Q{score.question_index + 1}</div>
+                <div class={[
+                  "text-2xl font-bold",
+                  case score.color do
+                    :green -> "text-green-400"
+                    :amber -> "text-yellow-400"
+                    :red -> "text-red-400"
+                    _ -> "text-gray-400"
+                  end
+                ]}>
+                  <%= if score.average do %>
+                    <%= format_score(score.average, score.scale_type) %>
+                  <% else %>
+                    —
+                  <% end %>
+                </div>
+                <div class="text-xs text-gray-400 truncate mt-1" title={score.title}>
+                  {score.title}
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+
+        <!-- Action Items -->
+        <%= if @action_count > 0 do %>
+          <div class="bg-gray-800 rounded-lg p-6 mb-6">
+            <h2 class="text-xl font-semibold text-white mb-2">
+              Action Items
+            </h2>
+            <p class="text-sm text-gray-400 mb-4">
+              {@completed_action_count}/{@action_count} completed
+            </p>
+
+            <div class="space-y-4">
+              <!-- General Actions -->
+              <%= if length(@general_actions) > 0 do %>
+                <div>
+                  <h3 class="text-sm font-semibold text-gray-400 mb-2">General Actions</h3>
+                  <ul class="space-y-2">
+                    <%= for action <- @general_actions do %>
+                      <li class="flex items-start gap-2 text-gray-300">
+                        <span class={if action.completed, do: "text-green-400", else: "text-gray-500"}>
+                          <%= if action.completed, do: "✓", else: "○" %>
+                        </span>
+                        <div class={if action.completed, do: "line-through text-gray-500"}>
+                          {action.description}
+                          <%= if action.owner_name && action.owner_name != "" do %>
+                            <span class="text-gray-500 text-sm">— {action.owner_name}</span>
+                          <% end %>
+                        </div>
+                      </li>
+                    <% end %>
+                  </ul>
+                </div>
+              <% end %>
+
+              <!-- Question-linked Actions -->
+              <%= for {question_index, actions} <- @question_actions do %>
+                <div>
+                  <% question = Enum.find(@scores_summary, fn s -> s.question_index == question_index end) %>
+                  <h3 class="text-sm font-semibold text-gray-400 mb-2">
+                    Q{question_index + 1}: <%= if question, do: question.title, else: "Unknown" %>
+                  </h3>
+                  <ul class="space-y-2">
+                    <%= for action <- actions do %>
+                      <li class="flex items-start gap-2 text-gray-300">
+                        <span class={if action.completed, do: "text-green-400", else: "text-gray-500"}>
+                          <%= if action.completed, do: "✓", else: "○" %>
+                        </span>
+                        <div class={if action.completed, do: "line-through text-gray-500"}>
+                          {action.description}
+                          <%= if action.owner_name && action.owner_name != "" do %>
+                            <span class="text-gray-500 text-sm">— {action.owner_name}</span>
+                          <% end %>
+                        </div>
+                      </li>
+                    <% end %>
+                  </ul>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+
+        <!-- Notes Summary -->
+        <%= if length(@all_notes) > 0 do %>
+          <div class="bg-gray-800 rounded-lg p-6 mb-6">
+            <h2 class="text-xl font-semibold text-white mb-4">
+              Discussion Notes ({length(@all_notes)})
+            </h2>
+            <ul class="space-y-2">
+              <%= for note <- @all_notes do %>
+                <li class="bg-gray-700 rounded-lg p-3">
+                  <%= if note.question_index do %>
+                    <div class="text-xs text-gray-500 mb-1">Question {note.question_index + 1}</div>
+                  <% end %>
+                  <p class="text-gray-300">{note.content}</p>
+                  <p class="text-xs text-gray-500 mt-1">— {note.author_name}</p>
+                </li>
+              <% end %>
+            </ul>
+          </div>
+        <% end %>
+
+        <!-- Participants -->
+        <div class="bg-gray-800 rounded-lg p-6 mb-6">
+          <h2 class="text-xl font-semibold text-white mb-4">Participants</h2>
+          <div class="flex flex-wrap gap-2">
+            <%= for p <- @participants do %>
+              <div class="bg-gray-700 rounded-lg px-3 py-2 flex items-center gap-2">
+                <span class="text-white">{p.name}</span>
+                <%= if p.is_facilitator do %>
+                  <span class="text-xs bg-purple-600 text-white px-2 py-0.5 rounded">
+                    Facilitator
+                  </span>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        </div>
+
+        <!-- Next Steps -->
+        <div class="bg-gray-800 rounded-lg p-6">
+          <h2 class="text-xl font-semibold text-white mb-4">Next Steps</h2>
+          <ul class="space-y-3 text-gray-300">
+            <li class="flex gap-3">
+              <span class="text-green-400">1.</span>
+              <span>Review the action items with your team and assign due dates.</span>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-green-400">2.</span>
+              <span>Schedule a follow-up session to check progress on actions.</span>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-green-400">3.</span>
+              <span>Consider running this workshop again in 3-6 months to track improvements.</span>
+            </li>
+          </ul>
+
+          <div class="mt-6 p-4 bg-gray-700 rounded-lg text-center">
+            <p class="text-gray-400 text-sm">
+              Export options (CSV, PDF) coming soon in Phase 2.
+            </p>
+          </div>
+
+          <div class="mt-6 text-center">
+            <a
+              href="/"
+              class="inline-block px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg transition-colors"
+            >
+              Return Home
+            </a>
+          </div>
+        </div>
       </div>
     </div>
     """

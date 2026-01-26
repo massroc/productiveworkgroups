@@ -203,21 +203,28 @@ Set via Fly.io secrets:
 - [x] "Ready" button for all participants to advance
 - [x] Mid-workshop transition screen (before question 5)
 
-### Outstanding Work
+#### Summary Phase (Complete)
+- [x] Overview of all 8 questions with scores
+- [x] Traffic light indicators for each criterion
+- [x] Pattern highlighting (strengths vs concerns)
+- [x] All notes displayed from scoring phase
 
-#### Summary Phase
-- [ ] Overview of all 8 questions with scores
-- [ ] Traffic light indicators for each criterion
-- [ ] Pattern highlighting (strengths vs concerns)
+#### Actions Phase (Complete)
+- [x] Action item creation
+- [x] Owner assignment per action
+- [x] Link actions to specific questions (optional)
+- [x] Toggle action completion status
+- [x] Delete actions
+- [x] Real-time sync across participants
 
-#### Actions Phase
-- [ ] Action item creation
-- [ ] Owner assignment per action
-- [ ] Link actions to specific questions (optional)
-
-#### Completed Phase
-- [ ] Final summary with notes and actions
+#### Completed Phase (Complete)
+- [x] Final summary with notes and actions
+- [x] Results overview with quick stats
+- [x] Participants list
+- [x] Next steps guidance
 - [ ] Export options (CSV, PDF) - deferred to Phase 2
+
+### Outstanding Work
 
 #### Timer System
 - [ ] Countdown timer per section
