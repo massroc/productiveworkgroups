@@ -1362,8 +1362,8 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
             Here's an overview of your team's responses across all eight questions.
           </p>
         </div>
-
-        <!-- Pattern Highlighting -->
+        
+    <!-- Pattern Highlighting -->
         <%= if length(@strengths) > 0 or length(@concerns) > 0 do %>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             <!-- Strengths -->
@@ -1378,15 +1378,15 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
                       <span class="text-green-400">✓</span>
                       <span>{item.title}</span>
                       <span class="text-green-400 font-semibold ml-auto">
-                        <%= format_score(item.average, item.scale_type) %>
+                        {format_score(item.average, item.scale_type)}
                       </span>
                     </li>
                   <% end %>
                 </ul>
               </div>
             <% end %>
-
-            <!-- Concerns -->
+            
+    <!-- Concerns -->
             <%= if length(@concerns) > 0 do %>
               <div class="bg-red-900/30 border border-red-700 rounded-lg p-4">
                 <h3 class="text-lg font-semibold text-red-400 mb-3">
@@ -1398,7 +1398,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
                       <span class="text-red-400">!</span>
                       <span>{item.title}</span>
                       <span class="text-red-400 font-semibold ml-auto">
-                        <%= format_score(item.average, item.scale_type) %>
+                        {format_score(item.average, item.scale_type)}
                       </span>
                     </li>
                   <% end %>
@@ -1407,8 +1407,8 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
             <% end %>
           </div>
         <% end %>
-
-        <!-- All Questions Summary -->
+        
+    <!-- All Questions Summary -->
         <div class="bg-gray-800 rounded-lg p-6 mb-6">
           <h2 class="text-xl font-semibold text-white mb-4">All Questions</h2>
           <div class="space-y-4">
@@ -1429,7 +1429,8 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
                       <h3 class="font-semibold text-white">{score.title}</h3>
                     </div>
                     <div class="text-sm text-gray-400 mt-1">
-                      Scale: <%= if score.scale_type == "balance" do %>
+                      Scale:
+                      <%= if score.scale_type == "balance" do %>
                         Balance (-5 to +5, optimal at 0)
                       <% else %>
                         Maximal (0 to 10, higher is better)
@@ -1447,7 +1448,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
                           _ -> "text-gray-400"
                         end
                       ]}>
-                        <%= format_score(score.average, score.scale_type) %>
+                        {format_score(score.average, score.scale_type)}
                       </div>
                       <div class="text-sm text-gray-400">
                         {score.count} responses
@@ -1461,8 +1462,8 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
             <% end %>
           </div>
         </div>
-
-        <!-- Notes Summary -->
+        
+    <!-- Notes Summary -->
         <%= if length(@all_notes) > 0 do %>
           <div class="bg-gray-800 rounded-lg p-6 mb-6">
             <h2 class="text-xl font-semibold text-white mb-4">
@@ -1483,8 +1484,8 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
             </ul>
           </div>
         <% end %>
-
-        <!-- Continue Button -->
+        
+    <!-- Continue Button -->
         <div class="bg-gray-800 rounded-lg p-6">
           <%= if @participant.is_facilitator do %>
             <button
@@ -1540,12 +1541,12 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
           </p>
           <%= if @action_count > 0 do %>
             <p class="text-sm text-gray-500 mt-2">
-              {@ completed_action_count}/{@action_count} completed
+              {@completed_action_count}/{@action_count} completed
             </p>
           <% end %>
         </div>
-
-        <!-- Create Action Form -->
+        
+    <!-- Create Action Form -->
         <div class="bg-gray-800 rounded-lg p-6 mb-6">
           <h2 class="text-lg font-semibold text-white mb-4">Add Action Item</h2>
           <form phx-submit="create_action" class="space-y-4">
@@ -1581,7 +1582,10 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
                 >
                   <option value="">General action</option>
                   <%= for score <- @scores_summary do %>
-                    <option value={score.question_index} selected={@action_question == score.question_index}>
+                    <option
+                      value={score.question_index}
+                      selected={@action_question == score.question_index}
+                    >
                       Q{score.question_index + 1}: {score.title}
                     </option>
                   <% end %>
@@ -1596,8 +1600,8 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
             </button>
           </form>
         </div>
-
-        <!-- Existing Actions -->
+        
+    <!-- Existing Actions -->
         <%= if @action_count > 0 do %>
           <div class="space-y-6">
             <!-- General Actions -->
@@ -1611,13 +1615,14 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
                 </ul>
               </div>
             <% end %>
-
-            <!-- Actions by Question -->
+            
+    <!-- Actions by Question -->
             <%= for {question_index, actions} <- @question_actions do %>
               <div class="bg-gray-800 rounded-lg p-6">
                 <h3 class="text-lg font-semibold text-white mb-4">
-                  <% question = Enum.find(@scores_summary, fn s -> s.question_index == question_index end) %>
-                  Q{question_index + 1}: <%= if question, do: question.title, else: "Unknown" %>
+                  <% question =
+                    Enum.find(@scores_summary, fn s -> s.question_index == question_index end) %> Q{question_index +
+                    1}: {if question, do: question.title, else: "Unknown"}
                 </h3>
                 <ul class="space-y-3">
                   <%= for action <- actions do %>
@@ -1632,8 +1637,8 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
             <p class="text-gray-400">No action items yet. Add your first action above.</p>
           </div>
         <% end %>
-
-        <!-- Finish Workshop Button -->
+        
+    <!-- Finish Workshop Button -->
         <div class="bg-gray-800 rounded-lg p-6 mt-6">
           <%= if @participant.is_facilitator do %>
             <button
@@ -1733,12 +1738,12 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
             Session code: <span class="font-mono text-white">{@session.code}</span>
           </p>
         </div>
-
-        <!-- Results Summary -->
+        
+    <!-- Results Summary -->
         <div class="bg-gray-800 rounded-lg p-6 mb-6">
           <h2 class="text-xl font-semibold text-white mb-4">Results Overview</h2>
-
-          <!-- Quick Stats -->
+          
+    <!-- Quick Stats -->
           <div class="grid grid-cols-3 gap-4 mb-6">
             <div class="text-center">
               <div class="text-3xl font-bold text-green-400">{length(@strengths)}</div>
@@ -1753,8 +1758,8 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
               <div class="text-sm text-gray-400">Concerns</div>
             </div>
           </div>
-
-          <!-- Score Grid -->
+          
+    <!-- Score Grid -->
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <%= for score <- @scores_summary do %>
               <div class={[
@@ -1777,7 +1782,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
                   end
                 ]}>
                   <%= if score.average do %>
-                    <%= format_score(score.average, score.scale_type) %>
+                    {format_score(score.average, score.scale_type)}
                   <% else %>
                     —
                   <% end %>
@@ -1789,8 +1794,8 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
             <% end %>
           </div>
         </div>
-
-        <!-- Action Items -->
+        
+    <!-- Action Items -->
         <%= if @action_count > 0 do %>
           <div class="bg-gray-800 rounded-lg p-6 mb-6">
             <h2 class="text-xl font-semibold text-white mb-2">
@@ -1809,7 +1814,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
                     <%= for action <- @general_actions do %>
                       <li class="flex items-start gap-2 text-gray-300">
                         <span class={if action.completed, do: "text-green-400", else: "text-gray-500"}>
-                          <%= if action.completed, do: "✓", else: "○" %>
+                          {if action.completed, do: "✓", else: "○"}
                         </span>
                         <div class={if action.completed, do: "line-through text-gray-500"}>
                           {action.description}
@@ -1822,19 +1827,20 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
                   </ul>
                 </div>
               <% end %>
-
-              <!-- Question-linked Actions -->
+              
+    <!-- Question-linked Actions -->
               <%= for {question_index, actions} <- @question_actions do %>
                 <div>
-                  <% question = Enum.find(@scores_summary, fn s -> s.question_index == question_index end) %>
+                  <% question =
+                    Enum.find(@scores_summary, fn s -> s.question_index == question_index end) %>
                   <h3 class="text-sm font-semibold text-gray-400 mb-2">
-                    Q{question_index + 1}: <%= if question, do: question.title, else: "Unknown" %>
+                    Q{question_index + 1}: {if question, do: question.title, else: "Unknown"}
                   </h3>
                   <ul class="space-y-2">
                     <%= for action <- actions do %>
                       <li class="flex items-start gap-2 text-gray-300">
                         <span class={if action.completed, do: "text-green-400", else: "text-gray-500"}>
-                          <%= if action.completed, do: "✓", else: "○" %>
+                          {if action.completed, do: "✓", else: "○"}
                         </span>
                         <div class={if action.completed, do: "line-through text-gray-500"}>
                           {action.description}
@@ -1850,8 +1856,8 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
             </div>
           </div>
         <% end %>
-
-        <!-- Notes Summary -->
+        
+    <!-- Notes Summary -->
         <%= if length(@all_notes) > 0 do %>
           <div class="bg-gray-800 rounded-lg p-6 mb-6">
             <h2 class="text-xl font-semibold text-white mb-4">
@@ -1870,8 +1876,8 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
             </ul>
           </div>
         <% end %>
-
-        <!-- Participants -->
+        
+    <!-- Participants -->
         <div class="bg-gray-800 rounded-lg p-6 mb-6">
           <h2 class="text-xl font-semibold text-white mb-4">Participants</h2>
           <div class="flex flex-wrap gap-2">
@@ -1887,8 +1893,8 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
             <% end %>
           </div>
         </div>
-
-        <!-- Next Steps -->
+        
+    <!-- Next Steps -->
         <div class="bg-gray-800 rounded-lg p-6">
           <h2 class="text-xl font-semibold text-white mb-4">Next Steps</h2>
           <ul class="space-y-3 text-gray-300">
