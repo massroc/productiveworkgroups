@@ -57,6 +57,7 @@ jobs:
         run: mix deps.compile
 
       - name: Check formatting
+        if: github.event_name == 'pull_request'
         run: mix format --check-formatted
 
       - name: Compile
