@@ -24,8 +24,6 @@ FROM ${BUILDER_IMAGE} as builder
 RUN apt-get update -y && apt-get install -y build-essential git curl \
     && apt-get clean && rm -f /var/lib/apt/lists/*_*
 
-# Install Node.js for assets
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt-get install -y nodejs
 
 # Prepare build dir
 WORKDIR /app
@@ -53,9 +51,6 @@ COPY priv priv
 COPY lib lib
 
 COPY assets assets
-
-# Install and compile assets
-RUN cd assets && npm install
 
 # Compile assets
 RUN mix assets.deploy
