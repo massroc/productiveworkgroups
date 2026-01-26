@@ -318,7 +318,9 @@ defmodule ProductiveWorkgroupsWeb.SessionLiveTest do
 
       # Create facilitator
       facilitator_token = Ecto.UUID.generate()
-      {:ok, facilitator} = Sessions.join_session(session, "Facilitator", facilitator_token, is_facilitator: true)
+
+      {:ok, facilitator} =
+        Sessions.join_session(session, "Facilitator", facilitator_token, is_facilitator: true)
 
       # Create participant
       participant_token = Ecto.UUID.generate()
@@ -387,7 +389,8 @@ defmodule ProductiveWorkgroupsWeb.SessionLiveTest do
       {:ok, _} = Scoring.submit_score(ctx.session, ctx.participant, 0, -1)
 
       # Create a note
-      {:ok, note} = Notes.create_note(ctx.session, 0, %{content: "Delete me", author_name: "Alice"})
+      {:ok, note} =
+        Notes.create_note(ctx.session, 0, %{content: "Delete me", author_name: "Alice"})
 
       conn =
         build_conn()
@@ -442,7 +445,9 @@ defmodule ProductiveWorkgroupsWeb.SessionLiveTest do
 
       # Create facilitator
       facilitator_token = Ecto.UUID.generate()
-      {:ok, facilitator} = Sessions.join_session(session, "Facilitator", facilitator_token, is_facilitator: true)
+
+      {:ok, facilitator} =
+        Sessions.join_session(session, "Facilitator", facilitator_token, is_facilitator: true)
 
       # Advance to scoring and then to question 4 (index 3)
       {:ok, session} = Sessions.start_session(session)

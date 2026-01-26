@@ -754,8 +754,8 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
               />
             </div>
           </div>
-
-      <!-- Question card -->
+          
+    <!-- Question card -->
           <div class="bg-gray-800 rounded-lg p-6 mb-6">
             <div class="text-sm text-green-400 mb-2">{@current_question.criterion_name}</div>
             <h1 class="text-2xl font-bold text-white mb-4">{@current_question.title}</h1>
@@ -796,7 +796,9 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
                 <span class="text-green-400 font-semibold">10</span>
               </div>
               <ul class="space-y-2 text-gray-300">
-                <li>• For these, <span class="text-green-400 font-semibold">more is always better</span></li>
+                <li>
+                  • For these, <span class="text-green-400 font-semibold">more is always better</span>
+                </li>
                 <li>• <span class="text-green-400 font-semibold">10 is optimal</span></li>
               </ul>
             </div>
@@ -1020,8 +1022,8 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
           </ul>
         </div>
       <% end %>
-
-      <!-- Notes capture -->
+      
+    <!-- Notes capture -->
       <div class="bg-gray-800 rounded-lg p-6">
         <h2 class="text-lg font-semibold text-white mb-4">
           Discussion Notes
@@ -1029,8 +1031,8 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
             <span class="text-sm font-normal text-gray-400">({length(@question_notes)})</span>
           <% end %>
         </h2>
-
-        <!-- Existing notes -->
+        
+    <!-- Existing notes -->
         <%= if length(@question_notes) > 0 do %>
           <ul class="space-y-3 mb-4">
             <%= for note <- @question_notes do %>
@@ -1052,8 +1054,8 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
             <% end %>
           </ul>
         <% end %>
-
-        <!-- Add note form -->
+        
+    <!-- Add note form -->
         <form phx-submit="add_note" class="flex gap-2">
           <input
             type="text"
@@ -1074,7 +1076,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
           Notes are visible to all participants and saved with the session.
         </p>
       </div>
-
+      
     <!-- Ready / Next controls -->
       <div class="bg-gray-800 rounded-lg p-6">
         <%= if @participant.is_facilitator do %>
