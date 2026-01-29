@@ -37,7 +37,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLiveTest do
       assert html =~ "Create New Workshop"
       assert html =~ "Create Workshop"
       assert html =~ "Your Name (Facilitator)"
-      assert html =~ "Planned Duration"
+      assert html =~ "Session Timer"
     end
   end
 
