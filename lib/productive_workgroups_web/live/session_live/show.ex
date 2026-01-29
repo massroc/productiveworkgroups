@@ -110,36 +110,25 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
   @impl true
   def handle_info({:session_updated, session}, socket) do
     old_state = socket.assigns.session.state
-    participant = socket.assigns.participant
 
     socket =
       socket
       |> assign(session: session)
-
-    # Reload data when transitioning to new phases
-    socket =
-      cond do
-        old_state != "scoring" and session.state == "scoring" ->
-          load_scoring_data(socket, session, participant)
-
-        old_state != "summary" and session.state == "summary" ->
-          load_summary_data(socket, session)
-
-        old_state != "actions" and session.state == "actions" ->
-          socket
-          |> load_summary_data(session)
-          |> load_actions_data(session)
-
-        old_state != "completed" and session.state == "completed" ->
-          socket
-          |> load_summary_data(session)
-          |> load_actions_data(session)
-
-        true ->
-          socket
-      end
+      |> handle_state_transition(old_state, session)
 
     {:noreply, socket}
+  end
+
+  defp handle_state_transition(socket, old_state, session) do
+    new_state = session.state
+
+    case {old_state != new_state, new_state} do
+      {true, "scoring"} -> load_scoring_data(socket, session, socket.assigns.participant)
+      {true, "summary"} -> load_summary_data(socket, session)
+      {true, "actions"} -> socket |> load_summary_data(session) |> load_actions_data(session)
+      {true, "completed"} -> socket |> load_summary_data(session) |> load_actions_data(session)
+      _ -> socket
+    end
   end
 
   # Handle score submission broadcast from other participants
