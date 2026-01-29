@@ -92,7 +92,10 @@ defmodule ProductiveWorkgroups.Scoring do
   def all_scored?(%Session{} = session, question_index) do
     active_count =
       Participant
-      |> where([p], p.session_id == ^session.id and p.status == "active" and p.is_observer == false)
+      |> where(
+        [p],
+        p.session_id == ^session.id and p.status == "active" and p.is_observer == false
+      )
       |> Repo.aggregate(:count)
 
     score_count = count_scores(session, question_index)

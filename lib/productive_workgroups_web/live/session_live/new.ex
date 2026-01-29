@@ -38,7 +38,8 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.New do
 
   @impl true
   def handle_event("toggle_participating", _params, socket) do
-    {:noreply, assign(socket, facilitator_participating: !socket.assigns.facilitator_participating)}
+    {:noreply,
+     assign(socket, facilitator_participating: !socket.assigns.facilitator_participating)}
   end
 
   defp format_duration(minutes) do
@@ -214,7 +215,10 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.New do
                   −
                 </button>
                 <div class="text-center w-32">
-                  <div data-display="formatted" class="text-2xl font-bold text-white whitespace-nowrap">
+                  <div
+                    data-display="formatted"
+                    class="text-2xl font-bold text-white whitespace-nowrap"
+                  >
                     {format_duration(@custom_duration)}
                   </div>
                   <div class="text-sm text-gray-400">
@@ -228,7 +232,12 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.New do
                 >
                   +
                 </button>
-                <input type="hidden" name="custom_duration" data-input="duration" value={@custom_duration} />
+                <input
+                  type="hidden"
+                  name="custom_duration"
+                  data-input="duration"
+                  value={@custom_duration}
+                />
               </div>
             <% end %>
           </div>
