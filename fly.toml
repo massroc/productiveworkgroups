@@ -2,7 +2,7 @@
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 
 app = "productive-workgroups"
-primary_region = "syd"  # Sydney, Australia
+primary_region = "sjc"  # San Jose, US
 
 [build]
   dockerfile = "Dockerfile"

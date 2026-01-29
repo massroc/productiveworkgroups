@@ -18,7 +18,7 @@ ARG UBUNTU_VERSION=jammy-20260109
 ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-ubuntu-${UBUNTU_VERSION}"
 ARG RUNNER_IMAGE="ubuntu:${UBUNTU_VERSION}"
 
-FROM ${BUILDER_IMAGE} as builder
+FROM ${BUILDER_IMAGE} AS builder
 
 # Install build dependencies
 RUN apt-get update -y && apt-get install -y build-essential git curl \
@@ -75,9 +75,9 @@ RUN apt-get update -y && \
 # Set the locale
 RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
 
-ENV LANG en_US.UTF-8
-ENV LANGUAGE en_US:en
-ENV LC_ALL en_US.UTF-8
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
 
 WORKDIR "/app"
 RUN chown nobody /app
@@ -99,4 +99,4 @@ USER nobody
 #
 # ENTRYPOINT ["/tini", "--"]
 
-CMD ["/app/bin/server"]
+CMD ["/app/bin/productive_workgroups", "start"]
