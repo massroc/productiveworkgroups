@@ -45,9 +45,11 @@ config :phoenix, :stacktrace_depth, 20
 # Initialize plugs at runtime for faster development compilation
 config :phoenix, :plug_init_mode, :runtime
 
+# Note: enable_expensive_runtime_checks causes high CPU in Docker.
+# Set PHOENIX_EXPENSIVE_CHECKS=true to enable when debugging LiveView issues.
 config :phoenix_live_view,
   debug_heex_annotations: true,
-  enable_expensive_runtime_checks: true
+  enable_expensive_runtime_checks: System.get_env("PHOENIX_EXPENSIVE_CHECKS") == "true"
 
 # Disable swoosh api client as it is only required for production adapters
 config :swoosh, :api_client, false

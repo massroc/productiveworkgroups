@@ -517,7 +517,8 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
     session = socket.assigns.session
     Sessions.reset_all_ready(session)
 
-    template = Workshops.get_template_with_questions(session.template_id)
+    # Reuse cached template
+    template = get_or_load_template(socket, session.template_id)
     is_last_question = session.current_question_index + 1 >= length(template.questions)
 
     do_advance(socket, session, is_last_question)
@@ -560,7 +561,8 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
 
   defp load_scoring_data(socket, session, participant) do
     if session.state == "scoring" do
-      template = Workshops.get_template_with_questions(session.template_id)
+      # Reuse cached template to avoid repeated database queries
+      template = get_or_load_template(socket, session.template_id)
       question_index = session.current_question_index
       question = Enum.find(template.questions, &(&1.index == question_index))
 
@@ -603,10 +605,13 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
     active_count =
       Enum.count(participants, fn p -> p.status == "active" and not p.is_observer end)
 
+    # Build participant map for O(1) lookups instead of O(n) Enum.find
+    participant_map = Map.new(participants, &{&1.id, &1})
+
     # Get scores with participant names
     scores_with_names =
       Enum.map(scores, fn score ->
-        participant = Enum.find(participants, &(&1.id == score.participant_id))
+        participant = Map.get(participant_map, score.participant_id)
 
         %{
           value: score.value,
@@ -630,22 +635,21 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
 
   defp load_summary_data(socket, session) do
     if session.state in ["summary", "actions", "completed"] do
-      template = Workshops.get_template_with_questions(session.template_id)
+      # Reuse cached template if available, otherwise load it
+      template = get_or_load_template(socket, session.template_id)
       scores_summary = Scoring.get_all_scores_summary(session, template)
       all_notes = Notes.list_all_notes(session)
 
-      # Categorize questions by color for pattern highlighting
-      strengths = Enum.filter(scores_summary, fn s -> s.color == :green end)
-      concerns = Enum.filter(scores_summary, fn s -> s.color == :red end)
-      neutral = Enum.filter(scores_summary, fn s -> s.color == :amber end)
+      # Single pass grouping instead of triple filtering
+      grouped = Enum.group_by(scores_summary, & &1.color)
 
       socket
       |> assign(summary_template: template)
       |> assign(scores_summary: scores_summary)
       |> assign(all_notes: all_notes)
-      |> assign(strengths: strengths)
-      |> assign(concerns: concerns)
-      |> assign(neutral: neutral)
+      |> assign(strengths: Map.get(grouped, :green, []))
+      |> assign(concerns: Map.get(grouped, :red, []))
+      |> assign(neutral: Map.get(grouped, :amber, []))
     else
       socket
       |> assign(summary_template: nil)
@@ -654,6 +658,17 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
       |> assign(strengths: [])
       |> assign(concerns: [])
       |> assign(neutral: [])
+    end
+  end
+
+  # Reuse cached template to avoid repeated database queries
+  defp get_or_load_template(socket, template_id) do
+    cached = socket.assigns[:template] || socket.assigns[:summary_template]
+
+    if cached && cached.id == template_id do
+      cached
+    else
+      Workshops.get_template_with_questions(template_id)
     end
   end
 

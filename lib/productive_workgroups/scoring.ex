@@ -169,12 +169,22 @@ defmodule ProductiveWorkgroups.Scoring do
 
   @doc """
   Gets score summaries for all questions in a session.
+
+  Optimized to load all scores in a single query instead of N+1 queries.
   """
   def get_all_scores_summary(%Session{} = session, %Template{} = template) do
     questions = Workshops.list_questions(template)
 
+    # Single query to get all scores for this session, grouped by question_index
+    all_scores =
+      Score
+      |> where([s], s.session_id == ^session.id)
+      |> Repo.all()
+      |> Enum.group_by(& &1.question_index)
+
     Enum.map(questions, fn question ->
-      summary = get_score_summary(session, question.index)
+      scores = Map.get(all_scores, question.index, [])
+      summary = calculate_summary_from_scores(scores)
 
       Map.merge(summary, %{
         question_index: question.index,
@@ -188,6 +198,23 @@ defmodule ProductiveWorkgroups.Scoring do
           )
       })
     end)
+  end
+
+  # Calculate summary stats from a list of scores (no database query)
+  defp calculate_summary_from_scores([]) do
+    %{count: 0, average: nil, min: nil, max: nil, spread: nil}
+  end
+
+  defp calculate_summary_from_scores(scores) do
+    values = Enum.map(scores, & &1.value)
+
+    %{
+      count: length(values),
+      average: Float.round(Enum.sum(values) / length(values), 1),
+      min: Enum.min(values),
+      max: Enum.max(values),
+      spread: Enum.max(values) - Enum.min(values)
+    }
   end
 
   ## Traffic Light Colors

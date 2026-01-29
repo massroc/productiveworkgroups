@@ -27,13 +27,19 @@ Hooks.Timer = {
 // Example: Score slider hook for smooth input
 Hooks.ScoreSlider = {
   mounted() {
-    const slider = this.el.querySelector('input[type="range"]')
-    const display = this.el.querySelector('[data-score-display]')
+    this.slider = this.el.querySelector('input[type="range"]')
+    this.display = this.el.querySelector('[data-score-display]')
 
-    if (slider && display) {
-      slider.addEventListener('input', (e) => {
-        display.innerText = e.target.value
-      })
+    if (this.slider && this.display) {
+      this.inputHandler = (e) => {
+        this.display.innerText = e.target.value
+      }
+      this.slider.addEventListener('input', this.inputHandler)
+    }
+  },
+  destroyed() {
+    if (this.slider && this.inputHandler) {
+      this.slider.removeEventListener('input', this.inputHandler)
     }
   }
 }
@@ -41,12 +47,16 @@ Hooks.ScoreSlider = {
 // Example: Copy to clipboard hook
 Hooks.CopyToClipboard = {
   mounted() {
-    this.el.addEventListener("click", () => {
+    this.clickHandler = () => {
       const text = this.el.dataset.copyText
       navigator.clipboard.writeText(text).then(() => {
         this.pushEvent("copied", {})
       })
-    })
+    }
+    this.el.addEventListener("click", this.clickHandler)
+  },
+  destroyed() {
+    this.el.removeEventListener("click", this.clickHandler)
   }
 }
 
@@ -61,15 +71,30 @@ Hooks.DurationPicker = {
     this.minutesDisplay = this.el.querySelector('[data-display="minutes"]')
     this.hiddenInput = this.el.querySelector('[data-input="duration"]')
 
-    this.el.querySelector('[data-action="decrement"]').addEventListener("click", () => {
+    this.decrementBtn = this.el.querySelector('[data-action="decrement"]')
+    this.incrementBtn = this.el.querySelector('[data-action="increment"]')
+
+    this.decrementHandler = () => {
       this.duration = Math.max(this.duration - 5, this.min)
       this.updateDisplay()
-    })
+    }
 
-    this.el.querySelector('[data-action="increment"]').addEventListener("click", () => {
+    this.incrementHandler = () => {
       this.duration = Math.min(this.duration + 5, this.max)
       this.updateDisplay()
-    })
+    }
+
+    this.decrementBtn.addEventListener("click", this.decrementHandler)
+    this.incrementBtn.addEventListener("click", this.incrementHandler)
+  },
+
+  destroyed() {
+    if (this.decrementBtn) {
+      this.decrementBtn.removeEventListener("click", this.decrementHandler)
+    }
+    if (this.incrementBtn) {
+      this.incrementBtn.removeEventListener("click", this.incrementHandler)
+    }
   },
 
   updateDisplay() {
