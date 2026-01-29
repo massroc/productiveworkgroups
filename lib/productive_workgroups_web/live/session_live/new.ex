@@ -95,7 +95,11 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.New do
         <form action={~p"/session/create"} method="post" phx-change="validate" class="space-y-6">
           <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
           <input type="hidden" name="duration" value={@final_duration || ""} />
-          <input type="hidden" name="facilitator_participating" value={@facilitator_participating} />
+          <input
+            type="hidden"
+            name="facilitator_participating"
+            value={to_string(@facilitator_participating)}
+          />
 
           <div>
             <label for="facilitator_name" class="block text-sm font-medium text-gray-300 mb-2">
