@@ -110,6 +110,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
   @impl true
   def handle_info({:session_updated, session}, socket) do
     old_state = socket.assigns.session.state
+    participant = socket.assigns.participant
 
     socket =
       socket
@@ -118,6 +119,9 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
     # Reload data when transitioning to new phases
     socket =
       cond do
+        old_state != "scoring" and session.state == "scoring" ->
+          load_scoring_data(socket, session, participant)
+
         old_state != "summary" and session.state == "summary" ->
           load_summary_data(socket, session)
 
@@ -627,7 +631,9 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
   defp load_scores(socket, session, question_index) do
     scores = Scoring.list_scores_for_question(session, question_index)
     all_scored = Scoring.all_scored?(session, question_index)
-    participants = socket.assigns.participants
+
+    # Refresh participants from database to get accurate count
+    participants = Sessions.list_participants(session)
 
     active_count =
       Enum.count(participants, fn p -> p.status == "active" end)
@@ -646,6 +652,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
       end)
 
     socket
+    |> assign(participants: participants)
     |> assign(all_scores: scores_with_names)
     |> assign(scores_revealed: all_scored)
     |> assign(score_count: length(scores))
