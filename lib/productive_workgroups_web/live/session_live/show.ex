@@ -109,12 +109,12 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
 
   @impl true
   def handle_info({:session_updated, session}, socket) do
-    old_state = socket.assigns.session.state
+    old_session = socket.assigns.session
 
     socket =
       socket
       |> assign(session: session)
-      |> handle_state_transition(old_state, session)
+      |> handle_state_transition(old_session, session)
 
     {:noreply, socket}
   end
@@ -161,15 +161,33 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
   end
 
   # Helper for handling state transitions in session_updated broadcasts
-  defp handle_state_transition(socket, old_state, session) do
-    new_state = session.state
+  defp handle_state_transition(socket, old_session, session) do
+    state_changed = old_session.state != session.state
+    question_changed = old_session.current_question_index != session.current_question_index
 
-    case {old_state != new_state, new_state} do
-      {true, "scoring"} -> load_scoring_data(socket, session, socket.assigns.participant)
-      {true, "summary"} -> load_summary_data(socket, session)
-      {true, "actions"} -> socket |> load_summary_data(session) |> load_actions_data(session)
-      {true, "completed"} -> socket |> load_summary_data(session) |> load_actions_data(session)
-      _ -> socket
+    case {state_changed, question_changed, session.state} do
+      {true, _, "scoring"} ->
+        load_scoring_data(socket, session, socket.assigns.participant)
+
+      {_, true, "scoring"} ->
+        # Show mid-workshop transition when moving from question 4 (index 3) to question 5 (index 4)
+        show_transition = old_session.current_question_index == 3
+
+        socket
+        |> assign(show_mid_transition: show_transition)
+        |> load_scoring_data(session, socket.assigns.participant)
+
+      {true, _, "summary"} ->
+        load_summary_data(socket, session)
+
+      {true, _, "actions"} ->
+        socket |> load_summary_data(session) |> load_actions_data(session)
+
+      {true, _, "completed"} ->
+        socket |> load_summary_data(session) |> load_actions_data(session)
+
+      _ ->
+        socket
     end
   end
 
@@ -626,7 +644,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
     participants = Sessions.list_participants(session)
 
     active_count =
-      Enum.count(participants, fn p -> p.status == "active" end)
+      Enum.count(participants, fn p -> p.status == "active" and not p.is_observer end)
 
     # Get scores with participant names
     scores_with_names =
@@ -738,16 +756,34 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
   end
 
   defp render_lobby(assigns) do
+    join_url = ProductiveWorkgroupsWeb.Endpoint.url() <> "/session/#{assigns.session.code}/join"
+    assigns = assign(assigns, :join_url, join_url)
+
     ~H"""
     <div class="flex flex-col items-center justify-center min-h-screen px-4">
       <div class="max-w-lg w-full text-center">
         <h1 class="text-3xl font-bold text-white mb-2">Waiting Room</h1>
         <p class="text-gray-400 mb-4">
-          Share this code with your team:
+          Share this link with your team:
         </p>
-        <p class="font-mono text-white font-bold text-4xl mb-8 tracking-wider">
-          {@session.code}
-        </p>
+        <div class="bg-gray-800 rounded-lg p-4 mb-8">
+          <div class="flex items-center gap-2">
+            <input
+              type="text"
+              readonly
+              value={@join_url}
+              id="join-url"
+              class="flex-1 bg-gray-700 border-none rounded-lg px-4 py-3 text-white font-mono text-sm focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              type="button"
+              phx-click={JS.dispatch("phx:copy", to: "#join-url")}
+              class="px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+            >
+              Copy
+            </button>
+          </div>
+        </div>
 
         <div class="bg-gray-800 rounded-lg p-6 mb-6">
           <h2 class="text-lg font-semibold text-white mb-4">
@@ -1077,41 +1113,54 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
   defp render_score_input(assigns) do
     ~H"""
     <div class="bg-gray-800 rounded-lg p-6 mb-6">
-      <h2 class="text-lg font-semibold text-white mb-4">
-        <%= if @has_submitted do %>
-          Score Submitted - Waiting for others...
-        <% else %>
-          Select Your Score
-        <% end %>
-      </h2>
-
-      <%= if @current_question.scale_type == "balance" do %>
-        {render_balance_scale(assigns)}
-      <% else %>
-        {render_maximal_scale(assigns)}
-      <% end %>
-
-      <%= if not @has_submitted do %>
-        <button
-          phx-click="submit_score"
-          disabled={@selected_value == nil}
-          class={[
-            "w-full mt-6 px-6 py-3 font-semibold rounded-lg transition-colors",
-            if(@selected_value != nil,
-              do: "bg-green-600 hover:bg-green-700 text-white",
-              else: "bg-gray-600 text-gray-400 cursor-not-allowed"
-            )
-          ]}
-        >
-          Submit Score
-        </button>
-      <% else %>
-        <div class="mt-6 text-center">
-          <div class="inline-flex items-center gap-2 text-gray-400">
-            <div class="animate-pulse w-2 h-2 bg-green-500 rounded-full" />
-            Waiting for {@active_participant_count - @score_count} more participant(s)...
+      <%= if @participant.is_observer do %>
+        <div class="text-center">
+          <div class="text-purple-400 text-lg font-semibold mb-2">Observer Mode</div>
+          <p class="text-gray-400">
+            You are observing this session. Waiting for team members to submit their scores...
+          </p>
+          <div class="mt-4 inline-flex items-center gap-2 text-gray-500">
+            <div class="animate-pulse w-2 h-2 bg-purple-500 rounded-full" />
+            {@score_count}/{@active_participant_count} scores submitted
           </div>
         </div>
+      <% else %>
+        <h2 class="text-lg font-semibold text-white mb-4">
+          <%= if @has_submitted do %>
+            Score Submitted - Waiting for others...
+          <% else %>
+            Select Your Score
+          <% end %>
+        </h2>
+
+        <%= if @current_question.scale_type == "balance" do %>
+          {render_balance_scale(assigns)}
+        <% else %>
+          {render_maximal_scale(assigns)}
+        <% end %>
+
+        <%= if not @has_submitted do %>
+          <button
+            phx-click="submit_score"
+            disabled={@selected_value == nil}
+            class={[
+              "w-full mt-6 px-6 py-3 font-semibold rounded-lg transition-colors",
+              if(@selected_value != nil,
+                do: "bg-green-600 hover:bg-green-700 text-white",
+                else: "bg-gray-600 text-gray-400 cursor-not-allowed"
+              )
+            ]}
+          >
+            Submit Score
+          </button>
+        <% else %>
+          <div class="mt-6 text-center">
+            <div class="inline-flex items-center gap-2 text-gray-400">
+              <div class="animate-pulse w-2 h-2 bg-green-500 rounded-full" />
+              Waiting for {@active_participant_count - @score_count} more participant(s)...
+            </div>
+          </div>
+        <% end %>
       <% end %>
     </div>
     """
@@ -1277,7 +1326,6 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
             ]}
           >
             <span>{if @show_discussion_prompts, do: "Hide", else: "Show"} Facilitator Tips</span>
-            <span class="text-sm">{if @show_discussion_prompts, do: "▲", else: "▼"}</span>
           </button>
         <% end %>
         <button
@@ -1297,7 +1345,6 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
               {length(@question_notes)}
             </span>
           <% end %>
-          <span class="text-sm">{if @show_notes, do: "▲", else: "▼"}</span>
         </button>
       </div>
       

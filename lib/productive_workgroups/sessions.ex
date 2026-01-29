@@ -242,6 +242,7 @@ defmodule ProductiveWorkgroups.Sessions do
   """
   def join_session(%Session{} = session, name, browser_token, opts \\ []) do
     is_facilitator = Keyword.get(opts, :is_facilitator, false)
+    is_observer = Keyword.get(opts, :is_observer, false)
 
     case get_participant(session, browser_token) do
       nil ->
@@ -250,7 +251,8 @@ defmodule ProductiveWorkgroups.Sessions do
           |> Participant.join_changeset(session, %{
             name: name,
             browser_token: browser_token,
-            is_facilitator: is_facilitator
+            is_facilitator: is_facilitator,
+            is_observer: is_observer
           })
           |> Repo.insert()
 

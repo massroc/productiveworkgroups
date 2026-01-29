@@ -24,6 +24,7 @@ defmodule ProductiveWorkgroups.Sessions.Participant do
     field :status, :string, default: "active"
     field :is_ready, :boolean, default: false
     field :is_facilitator, :boolean, default: false
+    field :is_observer, :boolean, default: false
     field :joined_at, :utc_datetime
     field :last_seen_at, :utc_datetime
 
@@ -46,6 +47,7 @@ defmodule ProductiveWorkgroups.Sessions.Participant do
       :status,
       :is_ready,
       :is_facilitator,
+      :is_observer,
       :joined_at,
       :last_seen_at
     ])

@@ -12,17 +12,22 @@ defmodule ProductiveWorkgroupsWeb.SessionController do
   """
   def create(conn, params) do
     facilitator_name = String.trim(params["facilitator_name"] || "")
-    duration = params["duration"] || "210"
+    # Use custom_duration if present (from client-side picker), otherwise use duration
+    duration = parse_duration(params["custom_duration"]) || parse_duration(params["duration"])
+    is_observer = params["facilitator_participating"] != "true"
 
     with {:ok, name} <- validate_name(facilitator_name),
          {:ok, template} <- get_template(),
          {:ok, session} <-
            Sessions.create_session(template, %{
-             planned_duration_minutes: String.to_integer(duration)
+             planned_duration_minutes: duration
            }),
          browser_token <- Ecto.UUID.generate(),
          {:ok, _participant} <-
-           Sessions.join_session(session, name, browser_token, is_facilitator: true) do
+           Sessions.join_session(session, name, browser_token,
+             is_facilitator: true,
+             is_observer: is_observer
+           ) do
       conn
       |> put_session(:browser_token, browser_token)
       |> redirect(to: ~p"/session/#{session.code}")
@@ -91,4 +96,14 @@ defmodule ProductiveWorkgroupsWeb.SessionController do
 
   defp validate_name(""), do: {:error, :name_required}
   defp validate_name(name), do: {:ok, name}
+
+  defp parse_duration(nil), do: nil
+  defp parse_duration(""), do: nil
+
+  defp parse_duration(duration) when is_binary(duration) do
+    case Integer.parse(duration) do
+      {value, _} when value > 0 -> value
+      _ -> nil
+    end
+  end
 end

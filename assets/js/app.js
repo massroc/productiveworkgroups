@@ -50,6 +50,47 @@ Hooks.CopyToClipboard = {
   }
 }
 
+// Duration picker hook for client-side increment/decrement
+Hooks.DurationPicker = {
+  mounted() {
+    this.duration = parseInt(this.el.dataset.duration) || 120
+    this.min = 30
+    this.max = 480
+
+    this.formattedDisplay = this.el.querySelector('[data-display="formatted"]')
+    this.minutesDisplay = this.el.querySelector('[data-display="minutes"]')
+    this.hiddenInput = this.el.querySelector('[data-input="duration"]')
+
+    this.el.querySelector('[data-action="decrement"]').addEventListener("click", () => {
+      this.duration = Math.max(this.duration - 5, this.min)
+      this.updateDisplay()
+    })
+
+    this.el.querySelector('[data-action="increment"]').addEventListener("click", () => {
+      this.duration = Math.min(this.duration + 5, this.max)
+      this.updateDisplay()
+    })
+  },
+
+  updateDisplay() {
+    const hours = Math.floor(this.duration / 60)
+    const mins = this.duration % 60
+
+    let formatted
+    if (hours === 0) {
+      formatted = `${mins} min`
+    } else if (mins === 0) {
+      formatted = `${hours} hr`
+    } else {
+      formatted = `${hours} hr ${mins} min`
+    }
+
+    this.formattedDisplay.innerText = formatted
+    this.minutesDisplay.innerText = this.duration
+    this.hiddenInput.value = this.duration
+  }
+}
+
 let liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
@@ -60,6 +101,22 @@ let liveSocket = new LiveSocket("/live", Socket, {
 topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
 window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
 window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
+
+// Copy to clipboard event handler
+window.addEventListener("phx:copy", (event) => {
+  const input = event.target
+  if (input && input.value) {
+    navigator.clipboard.writeText(input.value).then(() => {
+      // Show brief feedback by changing button text
+      const button = input.parentElement.querySelector("button")
+      if (button) {
+        const originalText = button.innerText
+        button.innerText = "Copied!"
+        setTimeout(() => { button.innerText = originalText }, 2000)
+      }
+    })
+  }
+})
 
 // connect if there are any LiveViews on the page
 liveSocket.connect()
