@@ -18,6 +18,7 @@ defmodule ProductiveWorkgroupsWeb.Features.WorkshopFlowTest do
       Workshops.create_question(template, %{
         index: 0,
         title: "Elbow Room",
+        criterion_number: "1",
         criterion_name: "Elbow Room",
         explanation: "Test explanation",
         scale_type: "balance",

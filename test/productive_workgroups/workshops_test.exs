@@ -70,6 +70,7 @@ defmodule ProductiveWorkgroups.WorkshopsTest do
     @valid_question_attrs %{
       index: 0,
       title: "Elbow Room",
+      criterion_number: "1",
       criterion_name: "Autonomy",
       explanation: "The degree of autonomy you have in how you do your work.",
       scale_type: "balance",
@@ -99,6 +100,7 @@ defmodule ProductiveWorkgroups.WorkshopsTest do
       attrs = %{
         index: 4,
         title: "Mutual Support",
+        criterion_number: "4",
         criterion_name: "Support",
         explanation: "The level of support and respect in your team.",
         scale_type: "maximal",
@@ -179,6 +181,7 @@ defmodule ProductiveWorkgroups.WorkshopsTest do
         Workshops.create_question(template, %{
           index: 0,
           title: "Q1",
+          criterion_number: "1",
           criterion_name: "C1",
           explanation: "E1",
           scale_type: "balance",

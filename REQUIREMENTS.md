@@ -32,16 +32,16 @@ Based on research by Drs Fred & Merrelyn Emery, the six intrinsic motivators tha
 6. **Desirable Future** - Skill development and career progression opportunities
 
 ### Summary: 6 Criteria, 8 Scored Questions
-| # | Question | Parent Criterion | Scale |
-|---|----------|------------------|-------|
+| Criterion # | Question | Parent Criterion | Scale |
+|-------------|----------|------------------|-------|
 | 1 | Elbow Room | Elbow Room | -5 to +5 |
-| 2 | 2.a. Setting Goals | Continual Learning | -5 to +5 |
-| 3 | 2.b. Getting Feedback | Continual Learning | -5 to +5 |
-| 4 | Variety | Variety | -5 to +5 |
-| 5 | Mutual Support and Respect | Mutual Support | 0 to 10 |
-| 6 | 5.a. Socially Useful | Meaningfulness | 0 to 10 |
-| 7 | 5.b. See Whole Product | Meaningfulness | 0 to 10 |
-| 8 | Desirable Future | Desirable Future | 0 to 10 |
+| 2a | Setting Goals | Continual Learning | -5 to +5 |
+| 2b | Getting Feedback | Continual Learning | -5 to +5 |
+| 3 | Variety | Variety | -5 to +5 |
+| 4 | Mutual Support and Respect | Mutual Support | 0 to 10 |
+| 5a | Socially Useful | Meaningfulness | 0 to 10 |
+| 5b | See Whole Product | Meaningfulness | 0 to 10 |
+| 6 | Desirable Future | Desirable Future | 0 to 10 |
 
 ## Tech Stack
 
@@ -93,23 +93,23 @@ This tool may serve as a foundation for other facilitated team events (e.g., tea
 - **Optimal**: 0 (balanced)
 - **Interpretation**: Negative values indicate too little, positive values indicate too much
 
-| Question | -5 | 0 | +5 |
-|----------|-----|-----|-----|
-| 1. Elbow Room | Too constrained | Just right | Too much autonomy |
-| 2. 2.a. Setting Goals | No ability to set goals | Balanced | Overwhelmed by goal-setting |
-| 3. 2.b. Getting Feedback | No feedback | Right amount | Excessive feedback |
-| 4. Variety | Too routine | Good mix | Too chaotic |
+| Criterion # | Question | -5 | 0 | +5 |
+|-------------|----------|-----|-----|-----|
+| 1 | Elbow Room | Too constrained | Just right | Too much autonomy |
+| 2a | Setting Goals | No ability to set goals | Balanced | Overwhelmed by goal-setting |
+| 2b | Getting Feedback | No feedback | Right amount | Excessive feedback |
+| 3 | Variety | Too routine | Good mix | Too chaotic |
 
 ### Questions 5-8: Maximal Scale (from Criteria 4-6)
 - **Range**: 0 to 10
 - **Optimal**: 10 (more is better)
 
-| Question | 0 | 10 |
-|----------|-----|-----|
-| 5. Mutual Support and Respect | No support | Excellent support |
-| 6. 5.a. Socially Useful | Work feels pointless | Highly valuable to society |
-| 7. 5.b. See Whole Product | No visibility of outcome | Clear view of full product |
-| 8. Desirable Future | Dead-end | Great growth path |
+| Criterion # | Question | 0 | 10 |
+|-------------|----------|-----|-----|
+| 4 | Mutual Support and Respect | No support | Excellent support |
+| 5a | Socially Useful | Work feels pointless | Highly valuable to society |
+| 5b | See Whole Product | No visibility of outcome | Clear view of full product |
+| 6 | Desirable Future | Dead-end | Great growth path |
 
 ## Workshop Flow
 
@@ -549,37 +549,37 @@ The following explanations will be shown to participants when scoring each quest
 
 **Balance consideration:** Autonomy preferences vary - some people thrive with more freedom, others prefer more structure. The optimal score (0) means you have the right amount for you.
 
-### Question 2: 2.a. Setting Goals (Continual Learning)
+### Question 2a: Setting Goals (Continual Learning)
 **What it means:** The ability to set your own challenges and targets rather than having them imposed externally. This enables you to maintain an optimal level of challenge.
 
 **Example:** When management sets a Friday deadline but work could finish Wednesday, do you have authority to set your own timeframes?
 
-### Question 3: 2.b. Getting Feedback (Continual Learning)
+### Question 2b: Getting Feedback (Continual Learning)
 **What it means:** Receiving accurate, timely feedback that enables learning and improvement. Delayed feedback (weeks or months later) provides little value for current work.
 
 **Why it matters:** Without timely feedback, you can't experiment and discover better methods - success becomes chance rather than learning.
 
-### Question 4: Variety
+### Question 3: Variety
 **What it means:** Having a good mix of different tasks and activities. Preferences differ - some people prefer diverse tasks, others favor routine.
 
 **Balance consideration:** The optimal score (0) means you're not stuck with excessive routine tasks, nor overwhelmed by too many demanding activities at once.
 
-### Question 5: Mutual Support and Respect
+### Question 4: Mutual Support and Respect
 **What it means:** Working in a cooperative rather than competitive environment where team members help each other during difficult periods.
 
 **What good looks like:** Help flows naturally among peers. Colleagues assist during challenging times without being asked.
 
-### Question 6: 5.a. Socially Useful (Meaningfulness)
+### Question 5a: Socially Useful (Meaningfulness)
 **What it means:** Your work is worthwhile and contributes value that is recognized by both you and the broader community.
 
 **Reflection:** Can you identify the tangible value your work contributes?
 
-### Question 7: 5.b. See Whole Product (Meaningfulness)
+### Question 5b: See Whole Product (Meaningfulness)
 **What it means:** Understanding how your specific work contributes to the complete product or service your organization delivers.
 
 **Example:** Like an assembly line worker who knows what happens before and after their station, and understands quality standards - can you connect your individual effort to organizational output?
 
-### Question 8: Desirable Future
+### Question 6: Desirable Future
 **What it means:** Your position offers opportunities to learn new skills and progress in your career. As you master new competencies, your aspirations can grow.
 
 **What good looks like:** Clear paths for development, recognition of growing capabilities, opportunities for increased responsibility.

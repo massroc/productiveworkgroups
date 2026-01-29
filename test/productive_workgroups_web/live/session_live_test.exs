@@ -20,6 +20,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLiveTest do
         Workshops.create_question(template, %{
           index: 0,
           title: "Test Question",
+          criterion_number: "1",
           criterion_name: "Test Criterion",
           explanation: "Test explanation",
           scale_type: "balance",
@@ -171,6 +172,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLiveTest do
         Workshops.create_question(template, %{
           index: 0,
           title: "Q1",
+          criterion_number: "1",
           criterion_name: "C1",
           explanation: "E1",
           scale_type: "balance",
@@ -305,6 +307,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLiveTest do
         Workshops.create_question(template, %{
           index: 0,
           title: "Test Question",
+          criterion_number: "1",
           criterion_name: "Test Criterion",
           explanation: "Test explanation",
           scale_type: "balance",
@@ -438,6 +441,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLiveTest do
         Workshops.create_question(template, %{
           index: 0,
           title: "Test Question",
+          criterion_number: "1",
           criterion_name: "Test Criterion",
           explanation: "Test explanation",
           scale_type: "balance",
@@ -563,6 +567,8 @@ defmodule ProductiveWorkgroupsWeb.SessionLiveTest do
         })
 
       # Add questions 0-4 (need at least 5 questions to test transition)
+      criterion_numbers = ["1", "2a", "2b", "3", "4"]
+
       for i <- 0..4 do
         scale_type = if i < 4, do: "balance", else: "maximal"
         scale_min = if i < 4, do: -5, else: 0
@@ -573,6 +579,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLiveTest do
           Workshops.create_question(template, %{
             index: i,
             title: "Question #{i + 1}",
+            criterion_number: Enum.at(criterion_numbers, i),
             criterion_name: "Criterion #{i + 1}",
             explanation: "Explanation #{i + 1}",
             scale_type: scale_type,
