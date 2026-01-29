@@ -237,10 +237,14 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.New do
               <div class="flex-1 text-left">
                 <div class="text-white font-medium">
                   <%= case @duration_option do %>
-                    <% "none" -> %>No timer
-                    <% "120" -> %>2 hours
-                    <% "210" -> %>3.5 hours
-                    <% "custom" -> %>{format_duration(@custom_duration)}
+                    <% "none" -> %>
+                      No timer
+                    <% "120" -> %>
+                      2 hours
+                    <% "210" -> %>
+                      3.5 hours
+                    <% "custom" -> %>
+                      {format_duration(@custom_duration)}
                   <% end %>
                 </div>
               </div>
