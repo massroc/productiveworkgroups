@@ -212,6 +212,64 @@ defmodule ProductiveWorkgroups.Sessions do
     broadcast_session_update(result)
   end
 
+  ## Backward Navigation
+
+  @doc """
+  Goes back to the previous question within the scoring phase.
+
+  Returns `{:error, :at_first_question}` if already at question 0.
+  """
+  def go_back_question(%Session{state: "scoring", current_question_index: 0}) do
+    {:error, :at_first_question}
+  end
+
+  def go_back_question(%Session{state: "scoring"} = session) do
+    result =
+      session
+      |> Session.transition_changeset("scoring", %{
+        current_question_index: session.current_question_index - 1
+      })
+      |> Repo.update()
+
+    broadcast_session_update(result)
+  end
+
+  @doc """
+  Goes back from scoring (at question 0) to intro.
+  """
+  def go_back_to_intro(%Session{state: "scoring", current_question_index: 0} = session) do
+    result =
+      session
+      |> Session.transition_changeset("intro", %{current_question_index: 0})
+      |> Repo.update()
+
+    broadcast_session_update(result)
+  end
+
+  @doc """
+  Goes back from summary to the last scoring question.
+  """
+  def go_back_to_scoring(%Session{state: "summary"} = session, last_question_index) do
+    result =
+      session
+      |> Session.transition_changeset("scoring", %{current_question_index: last_question_index})
+      |> Repo.update()
+
+    broadcast_session_update(result)
+  end
+
+  @doc """
+  Goes back from actions to summary.
+  """
+  def go_back_to_summary(%Session{state: "actions"} = session) do
+    result =
+      session
+      |> Session.transition_changeset("summary")
+      |> Repo.update()
+
+    broadcast_session_update(result)
+  end
+
   defp broadcast_session_update({:ok, session}) do
     broadcast(session, {:session_updated, session})
     {:ok, session}

@@ -660,4 +660,256 @@ defmodule ProductiveWorkgroupsWeb.SessionLiveTest do
       refute html =~ "New Scoring Scale Ahead"
     end
   end
+
+  describe "Facilitator back button" do
+    setup do
+      {:ok, template} =
+        Workshops.create_template(%{
+          name: "Back Button Test",
+          slug: "back-button-test",
+          version: "1.0.0",
+          default_duration_minutes: 180
+        })
+
+      # Add 8 questions
+      criterion_numbers = ["1", "2a", "2b", "3", "4", "5a", "5b", "6"]
+
+      for i <- 0..7 do
+        scale_type = if i < 4, do: "balance", else: "maximal"
+        scale_min = if i < 4, do: -5, else: 0
+        scale_max = if i < 4, do: 5, else: 10
+        optimal_value = if i < 4, do: 0, else: nil
+
+        {:ok, _} =
+          Workshops.create_question(template, %{
+            index: i,
+            title: "Question #{i + 1}",
+            criterion_number: Enum.at(criterion_numbers, i),
+            criterion_name: "Criterion #{i + 1}",
+            explanation: "Explanation #{i + 1}",
+            scale_type: scale_type,
+            scale_min: scale_min,
+            scale_max: scale_max,
+            optimal_value: optimal_value,
+            discussion_prompts: []
+          })
+      end
+
+      {:ok, session} = Sessions.create_session(template)
+
+      # Create facilitator
+      facilitator_token = Ecto.UUID.generate()
+
+      {:ok, facilitator} =
+        Sessions.join_session(session, "Facilitator", facilitator_token, is_facilitator: true)
+
+      # Create regular participant
+      participant_token = Ecto.UUID.generate()
+      {:ok, participant} = Sessions.join_session(session, "Alice", participant_token)
+
+      %{
+        session: session,
+        template: template,
+        facilitator: facilitator,
+        facilitator_token: facilitator_token,
+        participant: participant,
+        participant_token: participant_token
+      }
+    end
+
+    test "back button is not shown in lobby state", ctx do
+      conn =
+        build_conn()
+        |> Plug.Test.init_test_session(%{})
+        |> put_session(:browser_token, ctx.facilitator_token)
+
+      {:ok, _view, html} = live(conn, ~p"/session/#{ctx.session.code}")
+
+      # Back button should not be visible in lobby
+      refute html =~ "go_back"
+    end
+
+    test "back button is not shown to regular participants", ctx do
+      # Advance to scoring
+      {:ok, session} = Sessions.start_session(ctx.session)
+      {:ok, session} = Sessions.advance_to_scoring(session)
+      {:ok, _} = Scoring.submit_score(session, ctx.facilitator, 0, 0)
+      {:ok, _} = Scoring.submit_score(session, ctx.participant, 0, 0)
+      {:ok, _session} = Sessions.advance_question(session)
+
+      conn =
+        build_conn()
+        |> Plug.Test.init_test_session(%{})
+        |> put_session(:browser_token, ctx.participant_token)
+
+      {:ok, _view, html} = live(conn, ~p"/session/#{ctx.session.code}")
+
+      # Back button should not be visible to regular participants
+      refute html =~ "go_back"
+    end
+
+    test "back button is shown to facilitator in scoring state", ctx do
+      # Advance to scoring question 2
+      {:ok, session} = Sessions.start_session(ctx.session)
+      {:ok, session} = Sessions.advance_to_scoring(session)
+      {:ok, _} = Scoring.submit_score(session, ctx.facilitator, 0, 0)
+      {:ok, _} = Scoring.submit_score(session, ctx.participant, 0, 0)
+      {:ok, _session} = Sessions.advance_question(session)
+
+      conn =
+        build_conn()
+        |> Plug.Test.init_test_session(%{})
+        |> put_session(:browser_token, ctx.facilitator_token)
+
+      {:ok, _view, html} = live(conn, ~p"/session/#{ctx.session.code}")
+
+      # Back button should be visible
+      assert html =~ "go_back"
+      assert html =~ "Back"
+    end
+
+    test "facilitator can go back from question 2 to question 1", ctx do
+      # Advance to scoring question 2
+      {:ok, session} = Sessions.start_session(ctx.session)
+      {:ok, session} = Sessions.advance_to_scoring(session)
+      {:ok, _} = Scoring.submit_score(session, ctx.facilitator, 0, 0)
+      {:ok, _} = Scoring.submit_score(session, ctx.participant, 0, 0)
+      {:ok, _session} = Sessions.advance_question(session)
+
+      conn =
+        build_conn()
+        |> Plug.Test.init_test_session(%{})
+        |> put_session(:browser_token, ctx.facilitator_token)
+
+      {:ok, view, html} = live(conn, ~p"/session/#{ctx.session.code}")
+
+      # Should be at question 2
+      assert html =~ "Question 2 of 8"
+
+      # Click back
+      html = render_click(view, "go_back")
+
+      # Should now be at question 1
+      assert html =~ "Question 1 of 8"
+    end
+
+    test "going back unreveals scores so participants can change them", ctx do
+      # Advance to question 2 with revealed scores on question 1
+      {:ok, session} = Sessions.start_session(ctx.session)
+      {:ok, session} = Sessions.advance_to_scoring(session)
+      {:ok, _} = Scoring.submit_score(session, ctx.facilitator, 0, 2)
+      {:ok, _} = Scoring.submit_score(session, ctx.participant, 0, -1)
+      # Explicitly reveal scores (this happens automatically in the LiveView when all submit)
+      :ok = Scoring.reveal_scores(session, 0)
+      {:ok, session} = Sessions.advance_question(session)
+
+      # Verify scores were revealed
+      scores_before = Scoring.list_scores_for_question(session, 0)
+      assert Enum.all?(scores_before, & &1.revealed)
+
+      conn =
+        build_conn()
+        |> Plug.Test.init_test_session(%{})
+        |> put_session(:browser_token, ctx.facilitator_token)
+
+      {:ok, view, _html} = live(conn, ~p"/session/#{ctx.session.code}")
+
+      # Go back
+      render_click(view, "go_back")
+
+      # Verify scores are now unrevealed
+      scores_after = Scoring.list_scores_for_question(session, 0)
+      refute Enum.any?(scores_after, & &1.revealed)
+    end
+
+    test "facilitator can go back from question 1 to intro", ctx do
+      {:ok, session} = Sessions.start_session(ctx.session)
+      {:ok, _session} = Sessions.advance_to_scoring(session)
+
+      conn =
+        build_conn()
+        |> Plug.Test.init_test_session(%{})
+        |> put_session(:browser_token, ctx.facilitator_token)
+
+      {:ok, view, html} = live(conn, ~p"/session/#{ctx.session.code}")
+
+      # Should be at question 1
+      assert html =~ "Question 1 of 8"
+
+      # Click back
+      html = render_click(view, "go_back")
+
+      # Should now be at intro (step 4 - safe space)
+      assert html =~ "Creating a Safe Space"
+    end
+
+    test "facilitator can go back from summary to last question", ctx do
+      # Advance to summary
+      {:ok, session} = Sessions.start_session(ctx.session)
+      {:ok, session} = Sessions.advance_to_scoring(session)
+      {:ok, _session} = Sessions.advance_to_summary(session)
+
+      conn =
+        build_conn()
+        |> Plug.Test.init_test_session(%{})
+        |> put_session(:browser_token, ctx.facilitator_token)
+
+      {:ok, view, html} = live(conn, ~p"/session/#{ctx.session.code}")
+
+      # Should be at summary
+      assert html =~ "Workshop Summary"
+
+      # Click back
+      html = render_click(view, "go_back")
+
+      # Should now be at last question (question 8)
+      assert html =~ "Question 8 of 8"
+    end
+
+    test "facilitator can go back from actions to summary", ctx do
+      # Advance to actions
+      {:ok, session} = Sessions.start_session(ctx.session)
+      {:ok, session} = Sessions.advance_to_scoring(session)
+      {:ok, session} = Sessions.advance_to_summary(session)
+      {:ok, _session} = Sessions.advance_to_actions(session)
+
+      conn =
+        build_conn()
+        |> Plug.Test.init_test_session(%{})
+        |> put_session(:browser_token, ctx.facilitator_token)
+
+      {:ok, view, html} = live(conn, ~p"/session/#{ctx.session.code}")
+
+      # Should be at actions
+      assert html =~ "Action Items"
+
+      # Click back
+      html = render_click(view, "go_back")
+
+      # Should now be at summary
+      assert html =~ "Workshop Summary"
+    end
+
+    test "back button is not shown in completed state", ctx do
+      # Advance to completed
+      {:ok, session} = Sessions.start_session(ctx.session)
+      {:ok, session} = Sessions.advance_to_scoring(session)
+      {:ok, session} = Sessions.advance_to_summary(session)
+      {:ok, session} = Sessions.advance_to_actions(session)
+      {:ok, _session} = Sessions.complete_session(session)
+
+      conn =
+        build_conn()
+        |> Plug.Test.init_test_session(%{})
+        |> put_session(:browser_token, ctx.facilitator_token)
+
+      {:ok, _view, html} = live(conn, ~p"/session/#{ctx.session.code}")
+
+      # Should be at completed
+      assert html =~ "Workshop Complete"
+
+      # Back button should not be visible
+      refute html =~ "go_back"
+    end
+  end
 end

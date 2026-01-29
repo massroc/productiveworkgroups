@@ -87,6 +87,19 @@ defmodule ProductiveWorkgroups.Scoring do
   end
 
   @doc """
+  Marks all scores for a question as unrevealed.
+
+  Used when going back to a previous question to allow participants to change their scores.
+  """
+  def unreveal_scores(%Session{} = session, question_index) do
+    Score
+    |> where([s], s.session_id == ^session.id and s.question_index == ^question_index)
+    |> Repo.update_all(set: [revealed: false])
+
+    :ok
+  end
+
+  @doc """
   Checks if all active non-observer participants have submitted scores for a question.
   """
   def all_scored?(%Session{} = session, question_index) do

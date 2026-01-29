@@ -68,20 +68,41 @@ docker compose logs -f app
 - `priv/repo/migrations/` - Database migrations
 - `priv/repo/seeds.exs` - Database seed data
 
+## Testing (TDD Required)
+
+**This project strictly follows Test-Driven Development (TDD).** When implementing new features or making changes:
+
+1. **Run existing tests first** to verify current state: `docker compose --profile test run --rm test`
+2. **Write new tests** for any new functionality before or alongside implementation
+3. **Update existing tests** if behavior changes
+4. **Run tests again** to verify nothing broke and new tests pass
+5. **All tests must pass** before considering work complete
+
+### TDD Guidelines
+
+- Every new function in contexts (e.g., `Sessions`, `Scoring`) should have corresponding unit tests
+- Every new LiveView event handler should have integration tests
+- When modifying existing behavior, update the relevant tests to match
+- Test edge cases and error conditions, not just happy paths
+- Use the existing test files as patterns for new tests
+
 ## Documentation
+
+**Always update documentation when adding new features.**
+
+### Project Documentation
 
 - [README.md](README.md) - Project overview and setup
 - [REQUIREMENTS.md](REQUIREMENTS.md) - Functional requirements
 - [SOLUTION_DESIGN.md](SOLUTION_DESIGN.md) - Technical architecture
 
-## Testing
+### Documentation Guidelines
 
-This project uses TDD. When making changes:
-
-1. Run tests to verify current state: `docker compose --profile test run --rm test`
-2. Make your changes
-3. Run tests again to verify nothing broke
-4. All 143+ tests should pass before considering work complete
+- Document new API functions with `@doc` annotations
+- Update README.md if setup or usage instructions change
+- Update REQUIREMENTS.md when implementing new user-facing features
+- Update SOLUTION_DESIGN.md when adding new modules, contexts, or significant architectural changes
+- Keep documentation concise but comprehensive
 
 ## Code Style
 

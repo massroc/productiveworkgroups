@@ -453,7 +453,95 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
     end
   end
 
+  @impl true
+  def handle_event("go_back", _params, socket) do
+    participant = socket.assigns.participant
+
+    if participant.is_facilitator do
+      do_go_back(socket)
+    else
+      {:noreply, socket}
+    end
+  end
+
   # Private helper functions
+
+  defp do_go_back(socket) do
+    session = socket.assigns.session
+    do_go_back_from_state(socket, session, session.state)
+  end
+
+  defp do_go_back_from_state(socket, session, "scoring")
+       when session.current_question_index == 0 do
+    Sessions.reset_all_ready(session)
+
+    case Sessions.go_back_to_intro(session) do
+      {:ok, updated_session} ->
+        {:noreply,
+         socket
+         |> assign(session: updated_session)
+         |> assign(intro_step: 4)}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Failed to go back")}
+    end
+  end
+
+  defp do_go_back_from_state(socket, session, "scoring") do
+    Sessions.reset_all_ready(session)
+    target_index = session.current_question_index - 1
+    Scoring.unreveal_scores(session, target_index)
+
+    case Sessions.go_back_question(session) do
+      {:ok, updated_session} ->
+        {:noreply,
+         socket
+         |> assign(session: updated_session)
+         |> assign(show_mid_transition: false)
+         |> load_scoring_data(updated_session, socket.assigns.participant)}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Failed to go back")}
+    end
+  end
+
+  defp do_go_back_from_state(socket, session, "summary") do
+    Sessions.reset_all_ready(session)
+    template = get_or_load_template(socket, session.template_id)
+    last_index = length(template.questions) - 1
+    Scoring.unreveal_scores(session, last_index)
+
+    case Sessions.go_back_to_scoring(session, last_index) do
+      {:ok, updated_session} ->
+        {:noreply,
+         socket
+         |> assign(session: updated_session)
+         |> load_scoring_data(updated_session, socket.assigns.participant)}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Failed to go back")}
+    end
+  end
+
+  defp do_go_back_from_state(socket, session, "actions") do
+    Sessions.reset_all_ready(session)
+
+    case Sessions.go_back_to_summary(session) do
+      {:ok, updated_session} ->
+        {:noreply,
+         socket
+         |> assign(session: updated_session)
+         |> load_summary_data(updated_session)}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Failed to go back")}
+    end
+  end
+
+  defp do_go_back_from_state(socket, _session, _state) do
+    # Cannot go back from lobby, intro, or completed
+    {:noreply, socket}
+  end
 
   defp do_submit_score(socket, nil) do
     {:noreply, put_flash(socket, :error, "Please select a score first")}
@@ -715,7 +803,26 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
         <% _ -> %>
           {render_lobby(assigns)}
       <% end %>
+      {render_back_button(assigns)}
     </div>
+    """
+  end
+
+  defp can_go_back?(session, participant) do
+    participant.is_facilitator and session.state in ["scoring", "summary", "actions"]
+  end
+
+  defp render_back_button(assigns) do
+    ~H"""
+    <%= if can_go_back?(@session, @participant) do %>
+      <button
+        phx-click="go_back"
+        class="fixed bottom-4 left-4 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white font-medium rounded-lg transition-colors flex items-center gap-2 shadow-lg"
+      >
+        <span>←</span>
+        <span>Back</span>
+      </button>
+    <% end %>
     """
   end
 
