@@ -473,35 +473,23 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
 
   defp do_go_back_from_state(socket, session, "scoring")
        when session.current_question_index == 0 do
-    Sessions.reset_all_ready(session)
-
-    case Sessions.go_back_to_intro(session) do
-      {:ok, updated_session} ->
-        {:noreply,
-         socket
-         |> assign(session: updated_session)
-         |> assign(intro_step: 4)}
-
-      {:error, _} ->
-        {:noreply, put_flash(socket, :error, "Failed to go back")}
+    # If on first question scoring entry (not results), go back to intro
+    if socket.assigns.scores_revealed do
+      # On results page - just unreveal scores for current question
+      unreveal_current_question_scores(socket, session)
+    else
+      # On scoring entry - go back to intro
+      go_back_to_intro(socket, session)
     end
   end
 
   defp do_go_back_from_state(socket, session, "scoring") do
-    Sessions.reset_all_ready(session)
-    target_index = session.current_question_index - 1
-    Scoring.unreveal_scores(session, target_index)
-
-    case Sessions.go_back_question(session) do
-      {:ok, updated_session} ->
-        {:noreply,
-         socket
-         |> assign(session: updated_session)
-         |> assign(show_mid_transition: false)
-         |> load_scoring_data(updated_session, socket.assigns.participant)}
-
-      {:error, _} ->
-        {:noreply, put_flash(socket, :error, "Failed to go back")}
+    if socket.assigns.scores_revealed do
+      # On results page - unreveal current question's scores to return to scoring entry
+      unreveal_current_question_scores(socket, session)
+    else
+      # On scoring entry - go back to previous question's results
+      go_back_to_previous_question_results(socket, session)
     end
   end
 
@@ -541,6 +529,49 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
   defp do_go_back_from_state(socket, _session, _state) do
     # Cannot go back from lobby, intro, or completed
     {:noreply, socket}
+  end
+
+  defp unreveal_current_question_scores(socket, session) do
+    Sessions.reset_all_ready(session)
+    current_index = session.current_question_index
+    Scoring.unreveal_scores(session, current_index)
+
+    {:noreply,
+     socket
+     |> assign(scores_revealed: false)
+     |> load_scoring_data(session, socket.assigns.participant)}
+  end
+
+  defp go_back_to_previous_question_results(socket, session) do
+    Sessions.reset_all_ready(session)
+    # Don't unreveal - we want to show the previous question's results
+
+    case Sessions.go_back_question(session) do
+      {:ok, updated_session} ->
+        {:noreply,
+         socket
+         |> assign(session: updated_session)
+         |> assign(show_mid_transition: false)
+         |> load_scoring_data(updated_session, socket.assigns.participant)}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Failed to go back")}
+    end
+  end
+
+  defp go_back_to_intro(socket, session) do
+    Sessions.reset_all_ready(session)
+
+    case Sessions.go_back_to_intro(session) do
+      {:ok, updated_session} ->
+        {:noreply,
+         socket
+         |> assign(session: updated_session)
+         |> assign(intro_step: 4)}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Failed to go back")}
+    end
   end
 
   defp do_submit_score(socket, nil) do
@@ -809,7 +840,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
   end
 
   defp can_go_back?(session, participant) do
-    participant.is_facilitator and session.state in ["scoring", "summary", "actions"]
+    participant.is_facilitator and session.state in ["summary", "actions"]
   end
 
   defp render_back_button(assigns) do
@@ -1182,6 +1213,18 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
             />
           <% else %>
             {render_score_input(assigns)}
+            <!-- Facilitator back button during scoring entry -->
+            <%= if @participant.is_facilitator do %>
+              <div class="bg-gray-800 rounded-lg p-6">
+                <button
+                  phx-click="go_back"
+                  class="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <span>←</span>
+                  <span>Back</span>
+                </button>
+              </div>
+            <% end %>
           <% end %>
         </div>
       </div>

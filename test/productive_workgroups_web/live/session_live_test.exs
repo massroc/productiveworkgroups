@@ -793,15 +793,14 @@ defmodule ProductiveWorkgroupsWeb.SessionLiveTest do
       assert html =~ "Question 1 of 8"
     end
 
-    test "going back unreveals scores so participants can change them", ctx do
-      # Advance to question 2 with revealed scores on question 1
+    test "going back from results page unreveals scores so participants can change them", ctx do
+      # Start session and advance to scoring
       {:ok, session} = Sessions.start_session(ctx.session)
       {:ok, session} = Sessions.advance_to_scoring(session)
       {:ok, _} = Scoring.submit_score(session, ctx.facilitator, 0, 2)
       {:ok, _} = Scoring.submit_score(session, ctx.participant, 0, -1)
       # Explicitly reveal scores (this happens automatically in the LiveView when all submit)
       :ok = Scoring.reveal_scores(session, 0)
-      {:ok, session} = Sessions.advance_question(session)
 
       # Verify scores were revealed
       scores_before = Scoring.list_scores_for_question(session, 0)
@@ -812,9 +811,11 @@ defmodule ProductiveWorkgroupsWeb.SessionLiveTest do
         |> Plug.Test.init_test_session(%{})
         |> put_session(:browser_token, ctx.facilitator_token)
 
-      {:ok, view, _html} = live(conn, ~p"/session/#{ctx.session.code}")
+      # Load the page - should show results page since scores are revealed
+      {:ok, view, html} = live(conn, ~p"/session/#{ctx.session.code}")
+      assert html =~ "Discuss the results"
 
-      # Go back
+      # Go back from results page to scoring entry
       render_click(view, "go_back")
 
       # Verify scores are now unrevealed

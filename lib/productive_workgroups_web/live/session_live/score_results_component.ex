@@ -138,16 +138,25 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.ScoreResultsComponent do
     <!-- Ready / Next controls -->
       <div class="bg-gray-800 rounded-lg p-6">
         <%= if @participant.is_facilitator do %>
-          <button
-            phx-click="next_question"
-            class="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors"
-          >
-            <%= if @session.current_question_index + 1 >= 8 do %>
-              Continue to Summary →
-            <% else %>
-              Next Question →
-            <% end %>
-          </button>
+          <div class="flex gap-3">
+            <button
+              phx-click="go_back"
+              class="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+            >
+              <span>←</span>
+              <span>Back</span>
+            </button>
+            <button
+              phx-click="next_question"
+              class="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors"
+            >
+              <%= if @session.current_question_index + 1 >= 8 do %>
+                Continue to Summary →
+              <% else %>
+                Next Question →
+              <% end %>
+            </button>
+          </div>
           <p class="text-center text-gray-500 text-sm mt-2">
             As facilitator, advance when the team is ready.
           </p>
