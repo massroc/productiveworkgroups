@@ -42,7 +42,7 @@ defmodule ProductiveWorkgroupsWeb do
         layouts: [html: ProductiveWorkgroupsWeb.Layouts]
 
       import Plug.Conn
-      import ProductiveWorkgroupsWeb.Gettext
+      use Gettext, backend: ProductiveWorkgroupsWeb.Gettext
 
       unquote(verified_routes())
     end
@@ -80,7 +80,7 @@ defmodule ProductiveWorkgroupsWeb do
     quote do
       import Phoenix.HTML
       import ProductiveWorkgroupsWeb.CoreComponents
-      import ProductiveWorkgroupsWeb.Gettext
+      use Gettext, backend: ProductiveWorkgroupsWeb.Gettext
 
       alias Phoenix.LiveView.JS
 

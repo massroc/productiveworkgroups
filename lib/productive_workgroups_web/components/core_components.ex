@@ -9,9 +9,9 @@ defmodule ProductiveWorkgroupsWeb.CoreComponents do
   them in any way you want, based on your application growth and needs.
   """
   use Phoenix.Component
+  use Gettext, backend: ProductiveWorkgroupsWeb.Gettext
 
   alias Phoenix.LiveView.JS
-  import ProductiveWorkgroupsWeb.Gettext
 
   @doc """
   Renders flash notices.

@@ -916,9 +916,9 @@ WorkshopLive (root)
 │   │   │
 │   │   ├── ScoringPhase
 │   │   │   ├── QuestionCard
+│   │   │   │   └── FacilitatorTips (expandable)
 │   │   │   ├── ScoreInput (balance or maximal)
 │   │   │   ├── ScoreReveal
-│   │   │   ├── DiscussionPrompts
 │   │   │   └── NotesCapture
 │   │   │
 │   │   ├── SummaryPhase
@@ -958,19 +958,20 @@ The following LiveComponents have been extracted from the main SessionLive to op
 #### ScoreResultsComponent
 **File:** `lib/productive_workgroups_web/live/session_live/score_results_component.ex`
 
-**Purpose:** Displays score results, discussion prompts, and notes capture. Isolates re-renders to just this section when scores change.
+**Purpose:** Displays score results and notes capture after scores are revealed. Isolates re-renders to just this section when scores change.
 
 **Assigns:**
 - `all_scores` - List of participant scores with colors
 - `current_question` - Current question being scored
-- `show_discussion_prompts` - Toggle state for facilitator tips
 - `show_notes` - Toggle state for notes section
 - `question_notes` - Notes for the current question
 - `note_input` - Current note input value
 - `participant` - Current participant
 - `session` - Current session
 
-**Note:** Events (toggle_discussion_prompts, toggle_notes, add_note, delete_note) are handled by the parent LiveView for test compatibility.
+**Note:** Events (toggle_notes, add_note, delete_note) are handled by the parent LiveView for test compatibility.
+
+**Facilitator Tips:** Discussion prompts (facilitator tips) are displayed on the question screen during the scoring phase, not on the results screen. This allows facilitators to access tips before and during scoring. Tips are shown via an expandable "More tips" button on the question card.
 
 #### ActionFormComponent
 **File:** `lib/productive_workgroups_web/live/session_live/action_form_component.ex`
