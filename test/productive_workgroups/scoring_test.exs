@@ -20,6 +20,7 @@ defmodule ProductiveWorkgroups.ScoringTest do
         Workshops.create_question(template, %{
           index: 0,
           title: "Elbow Room",
+          criterion_number: "1",
           criterion_name: "Autonomy",
           explanation: "Test",
           scale_type: "balance",
@@ -33,6 +34,7 @@ defmodule ProductiveWorkgroups.ScoringTest do
         Workshops.create_question(template, %{
           index: 1,
           title: "Mutual Support",
+          criterion_number: "4",
           criterion_name: "Support",
           explanation: "Test",
           scale_type: "maximal",
@@ -165,6 +167,7 @@ defmodule ProductiveWorkgroups.ScoringTest do
         Workshops.create_question(template, %{
           index: 0,
           title: "Q1",
+          criterion_number: "1",
           criterion_name: "C1",
           explanation: "Test",
           scale_type: "balance",
@@ -281,6 +284,8 @@ defmodule ProductiveWorkgroups.ScoringTest do
           default_duration_minutes: 180
         })
 
+      criterion_numbers = ["1", "2a", "2b", "3", "4", "5a", "5b", "6"]
+
       for i <- 0..7 do
         scale_type = if i < 4, do: "balance", else: "maximal"
         scale_min = if i < 4, do: -5, else: 0
@@ -290,6 +295,7 @@ defmodule ProductiveWorkgroups.ScoringTest do
         Workshops.create_question(template, %{
           index: i,
           title: "Q#{i + 1}",
+          criterion_number: Enum.at(criterion_numbers, i),
           criterion_name: "C#{i + 1}",
           explanation: "Test",
           scale_type: scale_type,

@@ -59,6 +59,7 @@ defmodule ProductiveWorkgroups.Factory do
     %Question{
       index: sequence(:question_index, & &1),
       title: sequence(:question_title, &"Question #{&1}"),
+      criterion_number: sequence(:criterion_number, &"#{&1}"),
       criterion_name: "Test Criterion",
       explanation: "This is a test question explanation.",
       scale_type: "balance",

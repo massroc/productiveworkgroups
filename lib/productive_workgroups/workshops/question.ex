@@ -18,6 +18,7 @@ defmodule ProductiveWorkgroups.Workshops.Question do
   schema "questions" do
     field :index, :integer
     field :title, :string
+    field :criterion_number, :string
     field :criterion_name, :string
     field :explanation, :string
     field :scale_type, :string
@@ -32,7 +33,7 @@ defmodule ProductiveWorkgroups.Workshops.Question do
     timestamps(type: :utc_datetime)
   end
 
-  @required_fields ~w(index title criterion_name explanation scale_type scale_min scale_max)a
+  @required_fields ~w(index title criterion_number criterion_name explanation scale_type scale_min scale_max)a
   @optional_fields ~w(optimal_value discussion_prompts scoring_guidance)a
 
   @doc false

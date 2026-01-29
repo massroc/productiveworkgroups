@@ -35,6 +35,7 @@ case Workshops.get_template_by_slug("six-criteria") do
       Workshops.create_question(template, %{
         index: 0,
         title: "Elbow Room",
+        criterion_number: "1",
         criterion_name: "Elbow Room",
         explanation: """
         The ability to make decisions about how you do your work in a way that suits your needs.
@@ -66,7 +67,8 @@ case Workshops.get_template_by_slug("six-criteria") do
     {:ok, _} =
       Workshops.create_question(template, %{
         index: 1,
-        title: "2.a. Setting Goals",
+        title: "Setting Goals",
+        criterion_number: "2a",
         criterion_name: "Continual Learning",
         explanation: """
         The ability to set your own challenges and targets rather than having them imposed
@@ -92,13 +94,14 @@ case Workshops.get_template_by_slug("six-criteria") do
         """
       })
 
-    IO.puts("  Created question: 2.a. Setting Goals")
+    IO.puts("  Created question: 2a - Setting Goals")
 
     # Question 2b: Getting Feedback (Continual Learning)
     {:ok, _} =
       Workshops.create_question(template, %{
         index: 2,
-        title: "2.b. Getting Feedback",
+        title: "Getting Feedback",
+        criterion_number: "2b",
         criterion_name: "Continual Learning",
         explanation: """
         Receiving accurate, timely feedback that enables learning and improvement.
@@ -124,13 +127,14 @@ case Workshops.get_template_by_slug("six-criteria") do
         """
       })
 
-    IO.puts("  Created question: 2.b. Getting Feedback")
+    IO.puts("  Created question: 2b - Getting Feedback")
 
-    # Question 4: Variety
+    # Question 3: Variety
     {:ok, _} =
       Workshops.create_question(template, %{
         index: 3,
         title: "Variety",
+        criterion_number: "3",
         criterion_name: "Variety",
         explanation: """
         Having a good mix of different tasks and activities. Preferences differ -
@@ -156,13 +160,14 @@ case Workshops.get_template_by_slug("six-criteria") do
         """
       })
 
-    IO.puts("  Created question: Variety")
+    IO.puts("  Created question: 3 - Variety")
 
-    # Question 5: Mutual Support and Respect
+    # Question 4: Mutual Support and Respect
     {:ok, _} =
       Workshops.create_question(template, %{
         index: 4,
         title: "Mutual Support and Respect",
+        criterion_number: "4",
         criterion_name: "Mutual Support and Respect",
         explanation: """
         Working in a cooperative rather than competitive environment where team members
@@ -187,13 +192,14 @@ case Workshops.get_template_by_slug("six-criteria") do
         """
       })
 
-    IO.puts("  Created question: Mutual Support and Respect")
+    IO.puts("  Created question: 4 - Mutual Support and Respect")
 
     # Question 5a: Socially Useful (Meaningfulness)
     {:ok, _} =
       Workshops.create_question(template, %{
         index: 5,
-        title: "5.a. Socially Useful",
+        title: "Socially Useful",
+        criterion_number: "5a",
         criterion_name: "Meaningfulness",
         explanation: """
         Your work is worthwhile and contributes value that is recognized by both
@@ -217,13 +223,14 @@ case Workshops.get_template_by_slug("six-criteria") do
         """
       })
 
-    IO.puts("  Created question: 5.a. Socially Useful")
+    IO.puts("  Created question: 5a - Socially Useful")
 
     # Question 5b: See Whole Product (Meaningfulness)
     {:ok, _} =
       Workshops.create_question(template, %{
         index: 6,
-        title: "5.b. See Whole Product",
+        title: "See Whole Product",
+        criterion_number: "5b",
         criterion_name: "Meaningfulness",
         explanation: """
         Understanding how your specific work contributes to the complete product
@@ -249,13 +256,14 @@ case Workshops.get_template_by_slug("six-criteria") do
         """
       })
 
-    IO.puts("  Created question: 5.b. See Whole Product")
+    IO.puts("  Created question: 5b - See Whole Product")
 
-    # Question 8: Desirable Future
+    # Question 6: Desirable Future
     {:ok, _} =
       Workshops.create_question(template, %{
         index: 7,
         title: "Desirable Future",
+        criterion_number: "6",
         criterion_name: "Desirable Future",
         explanation: """
         Your position offers opportunities to learn new skills and progress in your career.
@@ -280,7 +288,7 @@ case Workshops.get_template_by_slug("six-criteria") do
         """
       })
 
-    IO.puts("  Created question: Desirable Future")
+    IO.puts("  Created question: 6 - Desirable Future")
 
     IO.puts("\nSeed completed successfully!")
     IO.puts("Template '#{template.name}' created with 8 questions.")
