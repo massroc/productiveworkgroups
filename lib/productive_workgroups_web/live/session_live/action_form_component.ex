@@ -23,17 +23,17 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.ActionFormComponent do
   end
 
   @impl true
-  def handle_event("update_action_description", %{"value" => value}, socket) do
+  def handle_event("update_action_description", %{"description" => value}, socket) do
     {:noreply, assign(socket, action_description: value)}
   end
 
   @impl true
-  def handle_event("update_action_owner", %{"value" => value}, socket) do
+  def handle_event("update_action_owner", %{"owner" => value}, socket) do
     {:noreply, assign(socket, action_owner: value)}
   end
 
   @impl true
-  def handle_event("update_action_question", %{"value" => value}, socket) do
+  def handle_event("update_action_question", %{"question" => value}, socket) do
     question_index =
       case value do
         "" -> nil
