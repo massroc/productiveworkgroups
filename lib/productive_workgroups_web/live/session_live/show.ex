@@ -855,7 +855,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
           <div>
             <%= if @intro_step < 4 do %>
               <div class="flex items-center gap-4">
-                <%= if @participant.is_facilitator and @intro_step == 1 do %>
+                <%= if @intro_step == 1 do %>
                   <button
                     phx-click="skip_intro"
                     class="px-4 py-2 text-gray-500 hover:text-gray-300 text-sm transition-colors"
@@ -893,7 +893,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
     ~H"""
     <div class="text-center">
       <h1 class="text-3xl font-bold text-white mb-6">Welcome to the Six Criteria Workshop</h1>
-      <div class="text-gray-300 space-y-4 text-lg">
+      <div class="text-gray-300 space-y-6 text-lg leading-tight">
         <p>
           This workshop helps your team have a meaningful conversation about what makes work engaging and productive.
         </p>
@@ -913,16 +913,16 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
     ~H"""
     <div class="text-center">
       <h1 class="text-3xl font-bold text-white mb-6">How This Workshop Works</h1>
-      <div class="text-gray-300 space-y-4 text-lg text-left">
+      <div class="text-gray-300 space-y-6 text-lg text-left leading-snug">
         <p>You'll work through 8 questions covering 6 criteria together as a team.</p>
         <p class="font-semibold text-white">For each question:</p>
-        <ol class="list-decimal list-inside space-y-2 pl-4">
+        <ol class="list-decimal list-inside space-y-1 pl-4">
           <li>Everyone scores independently (your score stays hidden)</li>
           <li>Once everyone has submitted, all scores are revealed</li>
           <li>You discuss what you see — especially any differences</li>
           <li>When ready, you move to the next question</li>
         </ol>
-        <p class="text-gray-400 mt-6">
+        <p class="text-gray-400 mt-8">
           The goal isn't to "fix" scores — it's to
           <span class="text-white font-semibold">surface and understand</span>
           different experiences within your team.
@@ -936,13 +936,13 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
     ~H"""
     <div class="text-center">
       <h1 class="text-3xl font-bold text-white mb-6">Understanding the Balance Scale</h1>
-      <div class="text-gray-300 space-y-4 text-lg text-left">
+      <div class="text-gray-300 space-y-6 text-lg text-left leading-snug">
         <p>
           The first four questions use a <span class="text-white font-semibold">balance scale</span>
           from -5 to +5:
         </p>
 
-        <div class="bg-gray-800 rounded-lg p-6 my-6">
+        <div class="bg-gray-800 rounded-lg p-6 my-8">
           <div class="flex justify-between items-center mb-4">
             <span class="text-red-400 font-semibold">-5</span>
             <span class="text-green-400 font-semibold text-xl">0</span>
@@ -955,13 +955,13 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
           </div>
         </div>
 
-        <ul class="space-y-2 pl-4">
+        <ul class="space-y-1 pl-4">
           <li>• These criteria need the right amount — not too much, not too little</li>
           <li>• <span class="text-green-400 font-semibold">0 is optimal</span> (balanced)</li>
           <li>• Negative means too little, positive means too much</li>
         </ul>
 
-        <p class="text-gray-400 mt-4">
+        <p class="text-gray-400 mt-8">
           Don't overthink — go with your gut feeling about your current experience.
         </p>
       </div>
@@ -973,12 +973,12 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
     ~H"""
     <div class="text-center">
       <h1 class="text-3xl font-bold text-white mb-6">Creating a Safe Space</h1>
-      <div class="text-gray-300 space-y-4 text-lg text-left">
+      <div class="text-gray-300 space-y-6 text-lg text-left leading-snug">
         <p>
           This workshop operates under the <span class="text-white font-semibold">Prime Directive</span>:
         </p>
 
-        <blockquote class="italic text-gray-400 border-l-4 border-purple-600 pl-4 my-6">
+        <blockquote class="italic text-gray-400 border-l-4 border-purple-600 pl-4 my-8">
           "Regardless of what we discover, we understand and truly believe that everyone did the best job they could, given what they knew at the time, their skills and abilities, the resources available, and the situation at hand."
         </blockquote>
 
@@ -987,7 +987,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
           — not individual failings. Low scores aren't accusations; they're opportunities to improve how work is structured.
         </p>
 
-        <ul class="space-y-2 pl-4 mt-4">
+        <ul class="space-y-3 pl-4 mt-6">
           <li>
             • <span class="text-white">Be honest</span>
             — this only works if people share their real experience
@@ -997,7 +997,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
           <li>• Your individual scores are visible only to this team</li>
         </ul>
 
-        <div class="bg-gray-800 rounded-lg p-4 mt-6 text-center">
+        <div class="bg-gray-800 rounded-lg p-4 mt-8 text-center">
           <p class="text-white font-semibold">Ready?</p>
           <p class="text-gray-400 text-sm mt-1">
             When everyone is ready, the facilitator will begin scoring.
