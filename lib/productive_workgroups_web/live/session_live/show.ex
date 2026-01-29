@@ -119,18 +119,6 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
     {:noreply, socket}
   end
 
-  defp handle_state_transition(socket, old_state, session) do
-    new_state = session.state
-
-    case {old_state != new_state, new_state} do
-      {true, "scoring"} -> load_scoring_data(socket, session, socket.assigns.participant)
-      {true, "summary"} -> load_summary_data(socket, session)
-      {true, "actions"} -> socket |> load_summary_data(session) |> load_actions_data(session)
-      {true, "completed"} -> socket |> load_summary_data(session) |> load_actions_data(session)
-      _ -> socket
-    end
-  end
-
   # Handle score submission broadcast from other participants
   @impl true
   def handle_info({:score_submitted, _participant_id, question_index}, socket) do
@@ -170,6 +158,19 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
   @impl true
   def handle_info(_msg, socket) do
     {:noreply, socket}
+  end
+
+  # Helper for handling state transitions in session_updated broadcasts
+  defp handle_state_transition(socket, old_state, session) do
+    new_state = session.state
+
+    case {old_state != new_state, new_state} do
+      {true, "scoring"} -> load_scoring_data(socket, session, socket.assigns.participant)
+      {true, "summary"} -> load_summary_data(socket, session)
+      {true, "actions"} -> socket |> load_summary_data(session) |> load_actions_data(session)
+      {true, "completed"} -> socket |> load_summary_data(session) |> load_actions_data(session)
+      _ -> socket
+    end
   end
 
   @impl true

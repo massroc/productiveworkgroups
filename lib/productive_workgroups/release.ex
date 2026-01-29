@@ -30,6 +30,7 @@ defmodule ProductiveWorkgroups.Release do
           seed_script = Application.app_dir(@app, "priv/repo/seeds.exs")
 
           if File.exists?(seed_script) do
+            # sobelow_skip ["RCE.CodeModule"]
             Code.eval_file(seed_script)
           end
         end)
