@@ -5,34 +5,13 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.ScoreResultsComponent do
   """
   use ProductiveWorkgroupsWeb, :live_component
 
-  alias ProductiveWorkgroups.Scoring
-
   @impl true
   def update(assigns, socket) do
-    average = calculate_average(Enum.map(assigns.all_scores, & &1.value))
-    average_color = get_score_color(assigns.current_question, round(average))
-
-    {:ok,
-     socket
-     |> assign(assigns)
-     |> assign(average: average)
-     |> assign(average_color: average_color)}
+    {:ok, assign(socket, assigns)}
   end
 
   # All events are handled by parent LiveView for test compatibility
   # This component is purely for render isolation
-
-  defp calculate_average([]), do: 0
-
-  defp calculate_average(values) do
-    Float.round(Enum.sum(values) / length(values), 1)
-  end
-
-  defp get_score_color(nil, _value), do: :gray
-
-  defp get_score_color(question, value) do
-    Scoring.traffic_light_color(question.scale_type, value, question.optimal_value)
-  end
 
   @impl true
   def render(assigns) do
@@ -40,26 +19,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.ScoreResultsComponent do
     <div class="space-y-6">
       <!-- Results summary -->
       <div class="bg-gray-800 rounded-lg p-6">
-        <h2 class="text-lg font-semibold text-white mb-4">Results</h2>
-        
-    <!-- Team average -->
-        <div class="text-center mb-6">
-          <div class="text-sm text-gray-400 mb-1">Team Average</div>
-          <div class={[
-            "text-4xl font-bold",
-            case @average_color do
-              :green -> "text-green-400"
-              :amber -> "text-yellow-400"
-              :red -> "text-red-400"
-              _ -> "text-gray-400"
-            end
-          ]}>
-            <%= if @current_question.scale_type == "balance" and @average > 0 do %>
-              +
-            <% end %>
-            {@average}
-          </div>
-        </div>
+        <h2 class="text-lg font-semibold text-white mb-4">Discuss the results as a team</h2>
         
     <!-- Individual scores -->
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
