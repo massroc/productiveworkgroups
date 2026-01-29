@@ -76,12 +76,12 @@ defmodule ProductiveWorkgroupsWeb.CoreComponents do
       <.flash
         id="client-error"
         kind={:info}
-        title={gettext("Connection lost")}
+        title={gettext("Connecting")}
         phx-disconnected={show(".phx-client-error #client-error")}
         phx-connected={hide("#client-error")}
         hidden
       >
-        {gettext("Attempting to reconnect")}
+        {gettext("Creating new session")}
         <.icon name="hero-arrow-path" class="ml-1 h-3 w-3 animate-spin" />
       </.flash>
 
