@@ -424,6 +424,134 @@ defmodule ProductiveWorkgroupsWeb.SessionLiveTest do
     end
   end
 
+  describe "Facilitator role display" do
+    setup do
+      {:ok, template} =
+        Workshops.create_template(%{
+          name: "Facilitator Role Test",
+          slug: "facilitator-role-test",
+          version: "1.0.0",
+          default_duration_minutes: 180
+        })
+
+      {:ok, _} =
+        Workshops.create_question(template, %{
+          index: 0,
+          title: "Test Question",
+          criterion_name: "Test Criterion",
+          explanation: "Test explanation",
+          scale_type: "balance",
+          scale_min: -5,
+          scale_max: 5,
+          optimal_value: 0
+        })
+
+      {:ok, session} = Sessions.create_session(template)
+
+      %{session: session, template: template}
+    end
+
+    test "facilitator who is participating shows only Facilitator badge", %{
+      conn: conn,
+      session: session
+    } do
+      # Create facilitator who is participating (is_observer: false - the default)
+      facilitator_token = Ecto.UUID.generate()
+
+      {:ok, _facilitator} =
+        Sessions.join_session(session, "Lead", facilitator_token,
+          is_facilitator: true,
+          is_observer: false
+        )
+
+      conn =
+        conn
+        |> Plug.Test.init_test_session(%{})
+        |> put_session(:browser_token, facilitator_token)
+
+      {:ok, _view, html} = live(conn, ~p"/session/#{session.code}")
+
+      # Should show Facilitator badge
+      assert html =~ "Facilitator"
+      # Should NOT show Observer badge
+      refute html =~ "Observer"
+    end
+
+    test "facilitator who is observing shows only Observer badge, not both", %{
+      conn: conn,
+      session: session
+    } do
+      # Create facilitator who is observing
+      facilitator_token = Ecto.UUID.generate()
+
+      {:ok, _facilitator} =
+        Sessions.join_session(session, "Lead", facilitator_token,
+          is_facilitator: true,
+          is_observer: true
+        )
+
+      conn =
+        conn
+        |> Plug.Test.init_test_session(%{})
+        |> put_session(:browser_token, facilitator_token)
+
+      {:ok, _view, html} = live(conn, ~p"/session/#{session.code}")
+
+      # Should show Observer badge (gray background)
+      assert html =~ "bg-gray-600"
+      assert html =~ "Observer"
+      # Should NOT show Facilitator badge (purple background) - they cannot be both
+      # The facilitator badge uses bg-purple-600 class
+      refute html =~ "bg-purple-600"
+    end
+
+    test "facilitator defaults to participating (is_observer: false)", %{session: session} do
+      # Create facilitator without specifying is_observer
+      facilitator_token = Ecto.UUID.generate()
+
+      {:ok, facilitator} =
+        Sessions.join_session(session, "Lead", facilitator_token, is_facilitator: true)
+
+      # Default should be participating (not observing)
+      assert facilitator.is_facilitator == true
+      assert facilitator.is_observer == false
+    end
+
+    test "regular participant is neither facilitator nor observer by default", %{session: session} do
+      participant_token = Ecto.UUID.generate()
+
+      {:ok, participant} = Sessions.join_session(session, "Alice", participant_token)
+
+      assert participant.is_facilitator == false
+      assert participant.is_observer == false
+    end
+
+    test "observer participant shows Observer badge", %{conn: conn, session: session} do
+      # Create an observer who is not a facilitator
+      observer_token = Ecto.UUID.generate()
+
+      {:ok, _observer} =
+        Sessions.join_session(session, "Watcher", observer_token, is_observer: true)
+
+      # Create a facilitator so we can view the session
+      facilitator_token = Ecto.UUID.generate()
+
+      {:ok, _facilitator} =
+        Sessions.join_session(session, "Lead", facilitator_token, is_facilitator: true)
+
+      conn =
+        conn
+        |> Plug.Test.init_test_session(%{})
+        |> put_session(:browser_token, facilitator_token)
+
+      {:ok, _view, html} = live(conn, ~p"/session/#{session.code}")
+
+      # Observer participant should show Observer badge
+      assert html =~ "Watcher"
+      assert html =~ "Observer"
+    end
+  end
+
   describe "Mid-workshop transition" do
     setup do
       {:ok, template} =

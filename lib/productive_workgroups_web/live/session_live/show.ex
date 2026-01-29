@@ -759,15 +759,16 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
               <li class="flex items-center justify-between bg-gray-700 rounded-lg px-4 py-3">
                 <div class="flex items-center gap-2">
                   <span class="text-white">{p.name}</span>
-                  <%= if p.is_facilitator do %>
-                    <span class="text-xs bg-purple-600 text-white px-2 py-1 rounded">
-                      Facilitator
-                    </span>
-                  <% end %>
-                  <%= if p.is_observer do %>
-                    <span class="text-xs bg-gray-600 text-gray-300 px-2 py-1 rounded">
-                      Observer
-                    </span>
+                  <%= cond do %>
+                    <% p.is_observer -> %>
+                      <span class="text-xs bg-gray-600 text-gray-300 px-2 py-1 rounded">
+                        Observer
+                      </span>
+                    <% p.is_facilitator -> %>
+                      <span class="text-xs bg-purple-600 text-white px-2 py-1 rounded">
+                        Facilitator
+                      </span>
+                    <% true -> %>
                   <% end %>
                 </div>
                 <%= if p.id == @participant.id do %>
@@ -1723,10 +1724,16 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
             <%= for p <- @participants do %>
               <div class="bg-gray-700 rounded-lg px-3 py-2 flex items-center gap-2">
                 <span class="text-white">{p.name}</span>
-                <%= if p.is_facilitator do %>
-                  <span class="text-xs bg-purple-600 text-white px-2 py-0.5 rounded">
-                    Facilitator
-                  </span>
+                <%= cond do %>
+                  <% p.is_observer -> %>
+                    <span class="text-xs bg-gray-600 text-gray-300 px-2 py-0.5 rounded">
+                      Observer
+                    </span>
+                  <% p.is_facilitator -> %>
+                    <span class="text-xs bg-purple-600 text-white px-2 py-0.5 rounded">
+                      Facilitator
+                    </span>
+                  <% true -> %>
                 <% end %>
               </div>
             <% end %>
