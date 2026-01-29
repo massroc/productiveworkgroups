@@ -160,10 +160,12 @@ Workshops can range from under an hour (experienced teams) to a full day (first-
 **Recommended duration:** 3.5 hours (first-time teams)
 
 ### Session Time Setup
-- At session creation, enter **total allotted time** for the workshop
-- Default suggestion: 3.5 hours
-- Presets available: 1 hour, 2 hours, 3.5 hours, half-day (4 hours), full day (6+ hours)
-- Custom time entry allowed
+- Timer is **optional** - facilitator chooses whether to use one
+- If enabled, select from presets or custom duration:
+  - **No timer** (default) - no time tracking
+  - **2 hours** - Normal session
+  - **3.5 hours** - Full session (recommended for first-time teams)
+  - **Custom** - Set any duration in 5-minute increments
 
 ### Time Allocation
 
@@ -249,9 +251,16 @@ Scores reflect the *system and environment*, not individual failings. Low scores
 
 ## User Roles & Participation
 
-- **All participants are equal** - no facilitator role
-- System automatically reveals scores when all participants have submitted
-- **Advancing to next question**: All *active* participants must click "Ready" to proceed
+### Facilitator Role
+- The session creator is designated as the **facilitator**
+- Facilitator controls workshop progression (starting, advancing questions)
+- Facilitator can choose to participate in two modes:
+  - **Team member** (default) - participates in scoring like other team members
+  - **Observer** - watches the session without entering scores; useful when facilitating for another team
+
+### Participation
+- System automatically reveals scores when all *non-observer* participants have submitted
+- **Advancing to next question**: Facilitator controls when to move forward
 - **Typical team size**: 6-12 participants (optimize UI for this range)
 
 ### Handling Dropouts
@@ -754,5 +763,5 @@ Track anonymized usage patterns to refine the tool:
 
 ---
 
-*Document Version: 1.0 - Initial Requirements Complete*
-*Last Updated: 2026-01-22*
+*Document Version: 1.1 - Updated timer options and facilitator roles*
+*Last Updated: 2026-01-29*
