@@ -199,7 +199,7 @@ Set via Fly.io secrets:
 - [x] Score reveal with participant names
 - [x] Traffic light color coding (green/amber/red)
 - [x] Team average visualization
-- [x] Facilitator tips (collapsible, hidden by default)
+- [x] Facilitator tips on question screen (expandable via "More tips" button)
 - [x] Notes capture per question (collapsible, hidden by default, real-time sync)
 - [x] "Ready" button for all participants to advance
 - [x] Mid-workshop transition screen (before question 5)

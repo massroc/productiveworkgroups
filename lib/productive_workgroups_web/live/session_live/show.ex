@@ -53,7 +53,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
      |> assign(participants: participants)
      |> assign(intro_step: 1)
      |> assign(show_mid_transition: false)
-     |> assign(show_discussion_prompts: false)
+     |> assign(show_facilitator_tips: false)
      |> assign(show_notes: false)
      |> assign(note_input: "")
      |> load_scoring_data(workshop_session, participant)
@@ -295,10 +295,9 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
   end
 
   # Note handlers - kept for backward compatibility with tests
-  # In production, these are handled by ScoreResultsComponent
   @impl true
-  def handle_event("toggle_discussion_prompts", _params, socket) do
-    {:noreply, assign(socket, show_discussion_prompts: !socket.assigns.show_discussion_prompts)}
+  def handle_event("toggle_facilitator_tips", _params, socket) do
+    {:noreply, assign(socket, show_facilitator_tips: !socket.assigns.show_facilitator_tips)}
   end
 
   @impl true
@@ -574,7 +573,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
       |> assign(selected_value: if(my_score, do: my_score.value, else: nil))
       |> assign(my_score: if(my_score, do: my_score.value, else: nil))
       |> assign(has_submitted: my_score != nil)
-      |> assign(show_discussion_prompts: false)
+      |> assign(show_facilitator_tips: false)
       |> assign(show_notes: false)
       |> load_scores(session, question_index)
       |> load_notes(session, question_index)
@@ -590,7 +589,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
       |> assign(score_count: 0)
       |> assign(active_participant_count: 0)
       |> assign(question_notes: [])
-      |> assign(show_discussion_prompts: false)
+      |> assign(show_facilitator_tips: false)
       |> assign(show_notes: false)
     end
   end
@@ -1024,6 +1023,42 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
             <div class="text-sm text-green-400 mb-2">{@current_question.criterion_name}</div>
             <h1 class="text-2xl font-bold text-white mb-4">{@current_question.title}</h1>
             <p class="text-gray-300 whitespace-pre-line">{@current_question.explanation}</p>
+
+            <%= if length(@current_question.discussion_prompts) > 0 do %>
+              <%= if @show_facilitator_tips do %>
+                <!-- Expanded tips section -->
+                <div class="mt-4 pt-4 border-t border-gray-700">
+                  <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-sm font-semibold text-purple-400">Facilitator Tips</h3>
+                    <button
+                      type="button"
+                      phx-click="toggle_facilitator_tips"
+                      class="text-sm text-gray-400 hover:text-white transition-colors"
+                    >
+                      Hide tips
+                    </button>
+                  </div>
+                  <ul class="space-y-2">
+                    <%= for prompt <- @current_question.discussion_prompts do %>
+                      <li class="flex gap-2 text-gray-300 text-sm">
+                        <span class="text-purple-400">•</span>
+                        <span>{prompt}</span>
+                      </li>
+                    <% end %>
+                  </ul>
+                </div>
+              <% else %>
+                <!-- Collapsed state - show More tips button -->
+                <button
+                  type="button"
+                  phx-click="toggle_facilitator_tips"
+                  class="mt-4 text-sm text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-1"
+                >
+                  <span>More tips</span>
+                  <span class="text-xs">+</span>
+                </button>
+              <% end %>
+            <% end %>
           </div>
 
           <%= if @scores_revealed do %>
@@ -1032,7 +1067,6 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
               id="score-results"
               all_scores={@all_scores}
               current_question={@current_question}
-              show_discussion_prompts={@show_discussion_prompts}
               show_notes={@show_notes}
               question_notes={@question_notes}
               note_input={@note_input}

@@ -1,7 +1,10 @@
 defmodule ProductiveWorkgroupsWeb.SessionLive.ScoreResultsComponent do
   @moduledoc """
-  LiveComponent for displaying score results, discussion prompts, and notes capture.
+  LiveComponent for displaying score results and notes capture.
   Isolates re-renders to just this section when scores change.
+
+  Note: Facilitator tips (discussion prompts) are displayed on the question card
+  during the scoring phase, not on this results component.
   """
   use ProductiveWorkgroupsWeb, :live_component
 
@@ -53,28 +56,13 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.ScoreResultsComponent do
         </div>
       </div>
       
-    <!-- Toggle buttons for optional sections - events go to parent -->
-      <div class="flex gap-3">
-        <%= if length(@current_question.discussion_prompts) > 0 do %>
-          <button
-            type="button"
-            phx-click="toggle_discussion_prompts"
-            class={[
-              "flex-1 px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2",
-              if(@show_discussion_prompts,
-                do: "bg-purple-600 text-white",
-                else: "bg-gray-700 text-gray-300 hover:bg-gray-600"
-              )
-            ]}
-          >
-            <span>{if @show_discussion_prompts, do: "Hide", else: "Show"} Facilitator Tips</span>
-          </button>
-        <% end %>
+    <!-- Toggle button for notes - events go to parent -->
+      <div>
         <button
           type="button"
           phx-click="toggle_notes"
           class={[
-            "flex-1 px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2",
+            "w-full px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2",
             if(@show_notes,
               do: "bg-blue-600 text-white",
               else: "bg-gray-700 text-gray-300 hover:bg-gray-600"
@@ -89,21 +77,6 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.ScoreResultsComponent do
           <% end %>
         </button>
       </div>
-      
-    <!-- Discussion prompts (collapsible) -->
-      <%= if @show_discussion_prompts and length(@current_question.discussion_prompts) > 0 do %>
-        <div class="bg-gray-800 rounded-lg p-6 border border-purple-600/50">
-          <h2 class="text-lg font-semibold text-purple-400 mb-4">Facilitator Tips</h2>
-          <ul class="space-y-3">
-            <%= for prompt <- @current_question.discussion_prompts do %>
-              <li class="flex gap-3 text-gray-300">
-                <span class="text-purple-400">•</span>
-                <span>{prompt}</span>
-              </li>
-            <% end %>
-          </ul>
-        </div>
-      <% end %>
       
     <!-- Notes capture (collapsible) -->
       <%= if @show_notes do %>
