@@ -1,8 +1,8 @@
 # Productive Work Groups - Solution Design
 
 ## Document Info
-- **Version:** 1.0
-- **Last Updated:** 2026-01-23
+- **Version:** 1.1
+- **Last Updated:** 2026-01-29
 - **Status:** Draft
 
 ---
@@ -482,7 +482,7 @@ defmodule ProductiveWorkGroups.Sessions.Session do
 
     # Settings (embedded)
     embeds_one :settings, Settings do
-      field :total_duration_minutes, :integer, default: 210  # 3.5 hours
+      field :total_duration_minutes, :integer, default: nil  # nil = no timer; optional presets: 120, 210, or custom
       field :max_participants, :integer, default: 20
       field :skip_intro, :boolean, default: false
     end
@@ -511,7 +511,9 @@ defmodule ProductiveWorkGroups.Sessions.Participant do
   schema "participants" do
     field :name, :string
     field :browser_token, :string  # For reconnection
-    field :status, Ecto.Enum, values: [:active, :inactive, :observer]
+    field :status, Ecto.Enum, values: [:active, :inactive, :dropped]
+    field :is_facilitator, :boolean, default: false
+    field :is_observer, :boolean, default: false  # Observer cannot enter scores
     field :ready, :boolean, default: false
     field :joined_at, :utc_datetime
     field :last_seen_at, :utc_datetime
@@ -1599,5 +1601,5 @@ end
 
 ---
 
-*Document Version: 1.0*
-*Last Updated: 2026-01-23*
+*Document Version: 1.1*
+*Last Updated: 2026-01-29*

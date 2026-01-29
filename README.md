@@ -180,10 +180,11 @@ Set via Fly.io secrets:
 
 ### Completed
 
-- [x] Session creation with shareable code
-- [x] Join session via code (name entry)
+- [x] Session creation with shareable link (copy to clipboard)
+- [x] Join session via link (name entry)
 - [x] Waiting room / lobby with participant list
-- [x] Facilitator role and "Start Workshop" button
+- [x] Facilitator role with participation mode (team member or observer)
+- [x] Facilitator "Start Workshop" button
 - [x] Introduction phase (4 screens with navigation)
 - [x] Real-time participant sync via PubSub
 - [x] Database seeding for Six Criteria template
@@ -227,7 +228,8 @@ Set via Fly.io secrets:
 ### Outstanding Work
 
 #### Timer System
-- [ ] Countdown timer per section
+- [x] Optional timer setup at session creation (No timer, 2hr, 3.5hr, Custom)
+- [ ] Countdown timer display per section
 - [ ] Pacing indicator (on track/behind)
 - [ ] Time exceeded warnings
 - [ ] Pause/resume controls
@@ -236,7 +238,7 @@ Set via Fly.io secrets:
 - [ ] Facilitator Assistance button (contextual help)
 - [ ] Feedback button
 - [ ] Participant dropout handling (greyed out)
-- [ ] Late joiner as observer
+- [x] Observer mode (facilitator can observe without scoring)
 
 ## Documentation
 
