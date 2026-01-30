@@ -144,12 +144,75 @@ defmodule ProductiveWorkgroups.Facilitation do
   def phase_name("intro"), do: "Introduction"
   def phase_name("summary"), do: "Summary"
   def phase_name("actions"), do: "Action Planning"
+  def phase_name("summary_actions"), do: "Summary + Actions"
 
   def phase_name("question_" <> index) do
     "Question #{String.to_integer(index) + 1}"
   end
 
   def phase_name(phase), do: phase
+
+  ## Segment-Based Timer Functions
+
+  @doc """
+  Calculates the duration of each segment for a session's timer.
+
+  Total session time is divided into 10 equal segments:
+  - 8 segments for 8 questions
+  - 1 segment for Summary + Actions (combined)
+  - 1 segment unallocated as flex/buffer
+
+  Returns duration in seconds, or nil if session has no planned duration.
+  """
+  def calculate_segment_duration(%Session{planned_duration_minutes: nil}), do: nil
+
+  def calculate_segment_duration(%Session{planned_duration_minutes: minutes}) do
+    div(minutes * 60, 10)
+  end
+
+  @doc """
+  Returns the timer phase string for the current session state.
+
+  Timer phases map to visual display labels:
+  - scoring state: "question_0" through "question_7"
+  - summary/actions states: "summary_actions" (shared timer)
+  - other states: nil (no timer)
+  """
+  def current_timer_phase(%Session{state: "scoring", current_question_index: index}) do
+    "question_#{index}"
+  end
+
+  def current_timer_phase(%Session{state: state}) when state in ["summary", "actions"] do
+    "summary_actions"
+  end
+
+  def current_timer_phase(%Session{}), do: nil
+
+  @doc """
+  Returns whether the timer should be enabled for a session.
+
+  Timer is enabled when:
+  - Session has a planned duration
+  - Session is in a timed state (scoring, summary, or actions)
+  """
+  def timer_enabled?(%Session{planned_duration_minutes: nil}), do: false
+
+  def timer_enabled?(%Session{state: state}) when state in ["scoring", "summary", "actions"],
+    do: true
+
+  def timer_enabled?(%Session{}), do: false
+
+  @doc """
+  Returns the warning threshold in seconds (10% of segment duration).
+
+  When remaining time drops to or below this threshold, the timer turns red.
+  """
+  def warning_threshold(%Session{} = session) do
+    case calculate_segment_duration(session) do
+      nil -> nil
+      duration -> div(duration, 10)
+    end
+  end
 
   @doc """
   Returns the suggested duration for a phase in seconds.

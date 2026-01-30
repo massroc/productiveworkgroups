@@ -60,6 +60,93 @@ Hooks.CopyToClipboard = {
   }
 }
 
+// Facilitator timer hook for smooth client-side countdown
+Hooks.FacilitatorTimer = {
+  mounted() {
+    this.remaining = parseInt(this.el.dataset.remaining)
+    this.total = parseInt(this.el.dataset.total)
+    this.threshold = parseInt(this.el.dataset.threshold)
+
+    this.timeDisplay = this.el.querySelector('.font-mono')
+
+    // Start client-side countdown for smooth updates
+    this.startCountdown()
+
+    // Listen for server updates to sync
+    this.handleEvent("timer_sync", ({remaining}) => {
+      this.remaining = remaining
+      this.updateDisplay()
+    })
+  },
+
+  updated() {
+    // Re-read values when the element is updated by the server
+    const newRemaining = parseInt(this.el.dataset.remaining)
+    const newTotal = parseInt(this.el.dataset.total)
+    const newThreshold = parseInt(this.el.dataset.threshold)
+
+    // Only update if values changed significantly (more than 2 second drift)
+    if (Math.abs(this.remaining - newRemaining) > 2) {
+      this.remaining = newRemaining
+    }
+    this.total = newTotal
+    this.threshold = newThreshold
+    this.updateDisplay()
+  },
+
+  destroyed() {
+    this.stopCountdown()
+  },
+
+  startCountdown() {
+    this.stopCountdown()
+    this.interval = setInterval(() => {
+      if (this.remaining > 0) {
+        this.remaining--
+        this.updateDisplay()
+      } else {
+        this.stopCountdown()
+      }
+    }, 1000)
+  },
+
+  stopCountdown() {
+    if (this.interval) {
+      clearInterval(this.interval)
+      this.interval = null
+    }
+  },
+
+  updateDisplay() {
+    if (!this.timeDisplay) return
+
+    this.timeDisplay.textContent = this.formatTime(this.remaining)
+
+    // Update warning state
+    const isWarning = this.remaining <= this.threshold
+    const container = this.el
+
+    if (isWarning) {
+      container.classList.remove('bg-gray-800/90', 'border-gray-600')
+      container.classList.add('bg-red-900/90', 'border-red-600')
+      this.timeDisplay.classList.remove('text-white')
+      this.timeDisplay.classList.add('text-red-400')
+    } else {
+      container.classList.remove('bg-red-900/90', 'border-red-600')
+      container.classList.add('bg-gray-800/90', 'border-gray-600')
+      this.timeDisplay.classList.remove('text-red-400')
+      this.timeDisplay.classList.add('text-white')
+    }
+  },
+
+  formatTime(seconds) {
+    if (seconds < 0) return "0:00"
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
+}
+
 // Duration picker hook for client-side increment/decrement
 Hooks.DurationPicker = {
   mounted() {

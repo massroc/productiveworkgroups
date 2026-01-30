@@ -673,4 +673,75 @@ defmodule ProductiveWorkgroupsWeb.CoreComponents do
   def translate_errors(errors, field) when is_list(errors) do
     for {^field, {msg, opts}} <- errors, do: translate_error({msg, opts})
   end
+
+  @doc """
+  Renders a facilitator-only session timer.
+
+  The timer displays time remaining for the current phase, with a warning
+  state when 10% or less of the segment duration remains.
+
+  ## Attributes
+
+  - `remaining_seconds` - Current remaining time in seconds
+  - `total_seconds` - Total segment duration in seconds
+  - `phase_name` - Human-readable phase name for display
+  - `warning_threshold` - Seconds remaining when timer turns red (default: 10% of total)
+
+  ## Examples
+
+      <.facilitator_timer
+        remaining_seconds={@timer_remaining}
+        total_seconds={@segment_duration}
+        phase_name={@timer_phase_name}
+      />
+  """
+  attr :remaining_seconds, :integer, required: true
+  attr :total_seconds, :integer, required: true
+  attr :phase_name, :string, required: true
+  attr :warning_threshold, :integer, default: nil
+
+  def facilitator_timer(assigns) do
+    threshold = assigns.warning_threshold || div(assigns.total_seconds, 10)
+    is_warning = assigns.remaining_seconds <= threshold
+
+    assigns =
+      assigns
+      |> assign(:is_warning, is_warning)
+      |> assign(:formatted_time, format_timer_time(assigns.remaining_seconds))
+
+    ~H"""
+    <div
+      id="facilitator-timer"
+      phx-hook="FacilitatorTimer"
+      data-remaining={@remaining_seconds}
+      data-total={@total_seconds}
+      data-threshold={@warning_threshold || div(@total_seconds, 10)}
+      class={[
+        "fixed top-4 right-4 z-40 rounded-lg px-4 py-2 shadow-lg",
+        "flex flex-col items-end transition-colors duration-300",
+        if(@is_warning,
+          do: "bg-red-900/90 border border-red-600",
+          else: "bg-gray-800/90 border border-gray-600"
+        )
+      ]}
+    >
+      <div class="text-xs text-gray-400 mb-0.5">Time for this section</div>
+      <div class={[
+        "text-2xl font-mono font-bold tabular-nums",
+        if(@is_warning, do: "text-red-400", else: "text-white")
+      ]}>
+        {@formatted_time}
+      </div>
+      <div class="text-xs text-gray-400">{@phase_name}</div>
+    </div>
+    """
+  end
+
+  defp format_timer_time(seconds) when seconds < 0, do: "0:00"
+
+  defp format_timer_time(seconds) do
+    mins = div(seconds, 60)
+    secs = rem(seconds, 60)
+    "#{mins}:#{String.pad_leading(Integer.to_string(secs), 2, "0")}"
+  end
 end

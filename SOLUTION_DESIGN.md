@@ -1654,7 +1654,64 @@ defmodule ProductiveWorkGroups.Facilitation.TimeAllocations do
 end
 ```
 
+### Segment-Based Timer Implementation
+
+The facilitator timer divides the total session time into 10 equal segments:
+
+| Segment | Purpose |
+|---------|---------|
+| 1-8 | One segment per question (8 questions) |
+| 9 | Summary + Actions (combined) |
+| 10 | Unallocated flex/buffer time |
+
+**Timer Behavior:**
+- Timer is **facilitator-only** - participants don't see the timer
+- Timer **auto-starts** when entering a timed phase (scoring, summary, actions)
+- Timer displays in **top-right corner** with fixed positioning
+- Timer shows **warning state** (red) at 10% remaining time
+- Summary and Actions phases **share one timer** (no restart on transition)
+
+**Implementation Details:**
+
+```elixir
+# Segment duration calculation (Facilitation context)
+def calculate_segment_duration(%Session{planned_duration_minutes: minutes}) do
+  div(minutes * 60, 10)  # 10 equal segments in seconds
+end
+
+# Timer phase mapping
+def current_timer_phase(%Session{state: "scoring", current_question_index: idx}),
+  do: "question_#{idx}"
+def current_timer_phase(%Session{state: state}) when state in ["summary", "actions"],
+  do: "summary_actions"
+def current_timer_phase(_), do: nil
+
+# Warning threshold (10% of segment duration)
+def warning_threshold(%Session{} = session) do
+  case calculate_segment_duration(session) do
+    nil -> nil
+    duration -> div(duration, 10)
+  end
+end
+```
+
+**Client-Side Timer Hook:**
+- JavaScript hook (`FacilitatorTimer`) provides smooth 1-second countdown
+- Server syncs remaining time; client handles display updates
+- Handles warning state class toggling for visual feedback
+- Re-syncs on server updates to prevent drift
+
+**Timer Visibility Rules:**
+| State | Timer Visible (Facilitator) |
+|-------|----------------------------|
+| lobby | No |
+| intro | No |
+| scoring | Yes (phase: Question N) |
+| summary | Yes (phase: Summary + Actions) |
+| actions | Yes (phase: Summary + Actions) |
+| completed | No |
+
 ---
 
-*Document Version: 1.2*
-*Last Updated: 2026-01-29*
+*Document Version: 1.3*
+*Last Updated: 2026-01-31*

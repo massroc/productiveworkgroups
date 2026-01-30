@@ -4,6 +4,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
   """
   use ProductiveWorkgroupsWeb, :live_view
 
+  alias ProductiveWorkgroups.Facilitation
   alias ProductiveWorkgroups.Notes
   alias ProductiveWorkgroups.Scoring
   alias ProductiveWorkgroups.Sessions
@@ -56,9 +57,69 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
      |> assign(show_facilitator_tips: false)
      |> assign(show_notes: false)
      |> assign(note_input: "")
+     |> init_timer_assigns()
      |> load_scoring_data(workshop_session, participant)
      |> load_summary_data(workshop_session)
-     |> load_actions_data(workshop_session)}
+     |> load_actions_data(workshop_session)
+     |> maybe_start_timer()}
+  end
+
+  # Timer management helpers
+
+  defp init_timer_assigns(socket) do
+    socket
+    |> assign(timer_enabled: false)
+    |> assign(segment_duration: nil)
+    |> assign(timer_remaining: nil)
+    |> assign(timer_phase: nil)
+    |> assign(timer_phase_name: nil)
+    |> assign(timer_ref: nil)
+    |> assign(timer_warning_threshold: nil)
+  end
+
+  defp maybe_start_timer(socket) do
+    session = socket.assigns.session
+    participant = socket.assigns.participant
+
+    if participant.is_facilitator and Facilitation.timer_enabled?(session) do
+      start_phase_timer(socket, session)
+    else
+      socket
+    end
+  end
+
+  defp start_phase_timer(socket, session) do
+    # Cancel any existing timer
+    socket = cancel_timer(socket)
+
+    segment_duration = Facilitation.calculate_segment_duration(session)
+    timer_phase = Facilitation.current_timer_phase(session)
+    warning_threshold = Facilitation.warning_threshold(session)
+
+    if segment_duration && timer_phase do
+      # Schedule the first tick
+      timer_ref = Process.send_after(self(), :timer_tick, 1000)
+
+      socket
+      |> assign(timer_enabled: true)
+      |> assign(segment_duration: segment_duration)
+      |> assign(timer_remaining: segment_duration)
+      |> assign(timer_phase: timer_phase)
+      |> assign(timer_phase_name: Facilitation.phase_name(timer_phase))
+      |> assign(timer_ref: timer_ref)
+      |> assign(timer_warning_threshold: warning_threshold)
+    else
+      socket
+      |> assign(timer_enabled: false)
+    end
+  end
+
+  defp cancel_timer(socket) do
+    if socket.assigns[:timer_ref] do
+      Process.cancel_timer(socket.assigns.timer_ref)
+    end
+
+    assign(socket, timer_ref: nil)
   end
 
   @impl true
@@ -166,6 +227,22 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
     {:noreply, load_actions_data(socket, socket.assigns.session)}
   end
 
+  # Handle timer tick for facilitator timer countdown
+  @impl true
+  def handle_info(:timer_tick, socket) do
+    if socket.assigns.timer_enabled and socket.assigns.timer_remaining > 0 do
+      new_remaining = socket.assigns.timer_remaining - 1
+      timer_ref = Process.send_after(self(), :timer_tick, 1000)
+
+      {:noreply,
+       socket
+       |> assign(timer_remaining: new_remaining)
+       |> assign(timer_ref: timer_ref)}
+    else
+      {:noreply, assign(socket, timer_ref: nil)}
+    end
+  end
+
   @impl true
   def handle_info(_msg, socket) do
     {:noreply, socket}
@@ -178,7 +255,9 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
 
     case {state_changed, question_changed, session.state} do
       {true, _, "scoring"} ->
-        load_scoring_data(socket, session, socket.assigns.participant)
+        socket
+        |> load_scoring_data(session, socket.assigns.participant)
+        |> maybe_restart_timer_on_transition(old_session, session)
 
       {_, true, "scoring"} ->
         # Show mid-workshop transition when moving from question 4 (index 3) to question 5 (index 4)
@@ -187,19 +266,52 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
         socket
         |> assign(show_mid_transition: show_transition)
         |> load_scoring_data(session, socket.assigns.participant)
+        |> maybe_restart_timer_on_transition(old_session, session)
 
       {true, _, "summary"} ->
-        socket |> load_summary_data(session) |> load_actions_data(session)
+        socket
+        |> load_summary_data(session)
+        |> load_actions_data(session)
+        |> maybe_restart_timer_on_transition(old_session, session)
 
       {true, _, "actions"} ->
+        # Don't restart timer when transitioning from summary to actions - shared timer
         socket |> load_summary_data(session) |> load_actions_data(session)
 
       {true, _, "completed"} ->
-        socket |> load_summary_data(session) |> load_actions_data(session)
+        socket
+        |> load_summary_data(session)
+        |> load_actions_data(session)
+        |> stop_timer()
 
       _ ->
         socket
     end
+  end
+
+  defp maybe_restart_timer_on_transition(socket, old_session, session) do
+    participant = socket.assigns.participant
+
+    if participant.is_facilitator do
+      old_phase = Facilitation.current_timer_phase(old_session)
+      new_phase = Facilitation.current_timer_phase(session)
+
+      # Only restart if the phase actually changed
+      # (summary→actions keeps the same "summary_actions" phase, so no restart)
+      if old_phase != new_phase and Facilitation.timer_enabled?(session) do
+        start_phase_timer(socket, session)
+      else
+        socket
+      end
+    else
+      socket
+    end
+  end
+
+  defp stop_timer(socket) do
+    socket
+    |> cancel_timer()
+    |> assign(timer_enabled: false)
   end
 
   @impl true
@@ -832,6 +944,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
   def render(assigns) do
     ~H"""
     <div class="min-h-screen bg-gray-900">
+      {render_facilitator_timer(assigns)}
       <%= case @session.state do %>
         <% "lobby" -> %>
           {render_lobby(assigns)}
@@ -850,6 +963,19 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
       <% end %>
       {render_back_button(assigns)}
     </div>
+    """
+  end
+
+  defp render_facilitator_timer(assigns) do
+    ~H"""
+    <%= if @participant.is_facilitator and @timer_enabled and @timer_remaining do %>
+      <.facilitator_timer
+        remaining_seconds={@timer_remaining}
+        total_seconds={@segment_duration}
+        phase_name={@timer_phase_name}
+        warning_threshold={@timer_warning_threshold}
+      />
+    <% end %>
     """
   end
 

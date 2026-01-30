@@ -155,63 +155,64 @@ For each of the 8 questions:
 ## Time Management
 
 ### Overview
-Workshops can range from under an hour (experienced teams) to a full day (first-timers with rich discussions). A built-in timer helps teams stay on track without being rigid.
+Workshops can range from under an hour (experienced teams) to a full day (first-timers with rich discussions). A built-in timer helps facilitators stay on track without being rigid.
 
-**Recommended duration:** 3.5 hours (first-time teams)
+**Recommended duration:** 100-120 minutes (most teams)
 
 ### Session Time Setup
-- Timer is **optional** - facilitator chooses whether to use one
+- Timer is **optional** - facilitator chooses whether to use one at session creation
 - If enabled, select from presets or custom duration:
   - **No timer** (default) - no time tracking
   - **2 hours** - Normal session
   - **3.5 hours** - Full session (recommended for first-time teams)
-  - **Custom** - Set any duration in 5-minute increments
+  - **Custom** - Set any duration in 5-minute increments (30 min to 8 hours)
 
-### Time Allocation
+### Time Allocation: 10-Segment Approach
 
-The system divides total time into recommended durations per section:
+The system divides total time into **10 equal segments**:
 
-| Section | % of Total | 3.5 hr Example |
-|---------|------------|----------------|
-| Introduction | 5% | ~10 min |
-| Questions 1-4 (balance) | 35% | ~75 min (~18 min each) |
-| Mid-workshop transition | 2% | ~5 min |
-| Questions 5-8 (maximal) | 35% | ~75 min (~18 min each) |
-| Summary & reflection | 8% | ~15 min |
-| Action planning | 12% | ~25 min |
-| Buffer/wrap-up | 3% | ~5 min |
+| Segment | Purpose |
+|---------|---------|
+| 1-8 | One segment per question (8 questions) |
+| 9 | Summary + Actions (combined phase) |
+| 10 | Unallocated flex/buffer time |
 
-*Note: Percentages are guidance - can be refined based on experience.*
+**Example: 100-minute workshop**
+- Each segment = 10 minutes
+- Questions 1-8: 10 minutes each (80 min total)
+- Summary + Actions: 10 minutes
+- Flex buffer: 10 minutes
 
-### Timer Features
+This simplified approach ensures equal time per question and provides built-in flexibility.
 
-**Visible countdown:**
+### Timer Features (MVP)
+
+**Facilitator-only countdown:**
+- Timer visible **only to the facilitator** (not participants)
+- Fixed position in top-right corner
 - Shows time remaining for current section
-- Non-intrusive but always visible
+- Displays current phase name (e.g., "Question 3", "Summary + Actions")
 
-**Pacing indicator:**
-- Visual cue showing if on track, ahead, or behind
-- e.g., progress bar or subtle color shift
+**Warning state:**
+- Timer turns **red at 10% remaining** (e.g., 1 minute left on a 10-minute segment)
+- Visual cue helps facilitator pace discussions
 
-**Time exceeded warning:**
-- Gentle notification when section time runs out
-- "You've used your allocated time for this question. Take as long as you need, but be aware you may need to move faster later."
-- Does NOT force advancement - team decides
-
-**Overall time remaining:**
-- Always visible: total time left for entire workshop
-- Warning when approaching end with sections remaining
+**Auto-start behavior:**
+- Timer automatically starts when entering a timed phase (scoring, summary, actions)
+- Timer restarts when moving to the next question
+- Summary and Actions **share one timer** - no restart on that transition
 
 ### Philosophy
 - **Guidance, not enforcement** - timers inform, they don't control
+- **Facilitator's tool** - keeps the facilitator aware of pacing without distracting participants
 - Teams are free to spend more time where conversations are rich
-- The tool helps them understand the trade-offs (more time here = less time later)
-- First-time teams often need longer; experienced teams may finish early
+- The flex buffer provides breathing room
 
-### Timer Controls
+### Future Enhancements (Not in MVP)
 - Pause timer (e.g., for breaks)
-- Adjust remaining time mid-session if needed
-- Option to hide timer if team finds it distracting (via Facilitator Assistance?)
+- Adjust remaining time mid-session
+- Overall workshop time remaining display
+- Pacing indicators for ahead/behind schedule
 
 ---
 
@@ -763,5 +764,5 @@ Track anonymized usage patterns to refine the tool:
 
 ---
 
-*Document Version: 1.1 - Updated timer options and facilitator roles*
-*Last Updated: 2026-01-29*
+*Document Version: 1.2 - Updated timer to 10-segment facilitator-only approach*
+*Last Updated: 2026-01-31*

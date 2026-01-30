@@ -913,4 +913,231 @@ defmodule ProductiveWorkgroupsWeb.SessionLiveTest do
       refute html =~ "go_back"
     end
   end
+
+  describe "Facilitator timer functionality" do
+    setup do
+      {:ok, template} =
+        Workshops.create_template(%{
+          name: "Timer Test",
+          slug: "timer-test",
+          version: "1.0.0",
+          default_duration_minutes: 100
+        })
+
+      # Add 8 questions for a complete workshop
+      for i <- 0..7 do
+        {:ok, _} =
+          Workshops.create_question(template, %{
+            index: i,
+            title: "Question #{i + 1}",
+            criterion_number: "#{rem(i, 6) + 1}",
+            criterion_name: "Criterion #{rem(i, 6) + 1}",
+            explanation: "Explanation for question #{i + 1}",
+            scale_type: if(i < 4, do: "balance", else: "maximal"),
+            scale_min: if(i < 4, do: -5, else: 0),
+            scale_max: if(i < 4, do: 5, else: 10),
+            optimal_value: if(i < 4, do: 0, else: 10),
+            discussion_prompts: []
+          })
+      end
+
+      # Create session WITH planned duration
+      {:ok, session} =
+        Sessions.create_session(template, planned_duration_minutes: 100)
+
+      # Create facilitator
+      facilitator_token = Ecto.UUID.generate()
+
+      {:ok, facilitator} =
+        Sessions.join_session(session, "Facilitator", facilitator_token, is_facilitator: true)
+
+      # Create regular participant
+      participant_token = Ecto.UUID.generate()
+      {:ok, participant} = Sessions.join_session(session, "Alice", participant_token)
+
+      %{
+        session: session,
+        template: template,
+        facilitator: facilitator,
+        facilitator_token: facilitator_token,
+        participant: participant,
+        participant_token: participant_token
+      }
+    end
+
+    test "timer is visible to facilitator during scoring phase", ctx do
+      # Advance to scoring
+      {:ok, session} = Sessions.start_session(ctx.session)
+      {:ok, _session} = Sessions.advance_to_scoring(session)
+
+      conn =
+        build_conn()
+        |> Plug.Test.init_test_session(%{})
+        |> put_session(:browser_token, ctx.facilitator_token)
+
+      {:ok, _view, html} = live(conn, ~p"/session/#{ctx.session.code}")
+
+      # Timer should be visible with correct phase
+      assert html =~ "facilitator-timer"
+      assert html =~ "Time for this section"
+      assert html =~ "Question 1"
+    end
+
+    test "timer is NOT visible to non-facilitator participant", ctx do
+      # Advance to scoring
+      {:ok, session} = Sessions.start_session(ctx.session)
+      {:ok, _session} = Sessions.advance_to_scoring(session)
+
+      conn =
+        build_conn()
+        |> Plug.Test.init_test_session(%{})
+        |> put_session(:browser_token, ctx.participant_token)
+
+      {:ok, _view, html} = live(conn, ~p"/session/#{ctx.session.code}")
+
+      # Timer should NOT be visible
+      refute html =~ "facilitator-timer"
+    end
+
+    test "timer is NOT visible when session has no planned duration" do
+      # Create a session without planned duration
+      {:ok, template} =
+        Workshops.create_template(%{
+          name: "No Duration Test",
+          slug: "no-duration-test",
+          version: "1.0.0",
+          default_duration_minutes: 100
+        })
+
+      {:ok, _} =
+        Workshops.create_question(template, %{
+          index: 0,
+          title: "Q1",
+          criterion_number: "1",
+          criterion_name: "C1",
+          explanation: "E1",
+          scale_type: "balance",
+          scale_min: -5,
+          scale_max: 5,
+          optimal_value: 0
+        })
+
+      # Create session WITHOUT planned_duration_minutes
+      {:ok, session} = Sessions.create_session(template)
+
+      facilitator_token = Ecto.UUID.generate()
+
+      {:ok, _facilitator} =
+        Sessions.join_session(session, "Facilitator", facilitator_token, is_facilitator: true)
+
+      # Advance to scoring
+      {:ok, session} = Sessions.start_session(session)
+      {:ok, _session} = Sessions.advance_to_scoring(session)
+
+      conn =
+        build_conn()
+        |> Plug.Test.init_test_session(%{})
+        |> put_session(:browser_token, facilitator_token)
+
+      {:ok, _view, html} = live(conn, ~p"/session/#{session.code}")
+
+      # Timer should NOT be visible
+      refute html =~ "facilitator-timer"
+    end
+
+    test "timer NOT visible during lobby phase", ctx do
+      conn =
+        build_conn()
+        |> Plug.Test.init_test_session(%{})
+        |> put_session(:browser_token, ctx.facilitator_token)
+
+      {:ok, _view, html} = live(conn, ~p"/session/#{ctx.session.code}")
+
+      # Timer should NOT be visible in lobby
+      refute html =~ "facilitator-timer"
+    end
+
+    test "timer NOT visible during intro phase", ctx do
+      {:ok, _session} = Sessions.start_session(ctx.session)
+
+      conn =
+        build_conn()
+        |> Plug.Test.init_test_session(%{})
+        |> put_session(:browser_token, ctx.facilitator_token)
+
+      {:ok, _view, html} = live(conn, ~p"/session/#{ctx.session.code}")
+
+      # Timer should NOT be visible in intro
+      refute html =~ "facilitator-timer"
+    end
+
+    test "timer visible during summary phase", ctx do
+      {:ok, session} = Sessions.start_session(ctx.session)
+      {:ok, session} = Sessions.advance_to_scoring(session)
+      {:ok, _session} = Sessions.advance_to_summary(session)
+
+      conn =
+        build_conn()
+        |> Plug.Test.init_test_session(%{})
+        |> put_session(:browser_token, ctx.facilitator_token)
+
+      {:ok, _view, html} = live(conn, ~p"/session/#{ctx.session.code}")
+
+      # Timer should be visible with Summary + Actions phase
+      assert html =~ "facilitator-timer"
+      assert html =~ "Summary + Actions"
+    end
+
+    test "timer visible during actions phase with same phase name as summary", ctx do
+      {:ok, session} = Sessions.start_session(ctx.session)
+      {:ok, session} = Sessions.advance_to_scoring(session)
+      {:ok, session} = Sessions.advance_to_summary(session)
+      {:ok, _session} = Sessions.advance_to_actions(session)
+
+      conn =
+        build_conn()
+        |> Plug.Test.init_test_session(%{})
+        |> put_session(:browser_token, ctx.facilitator_token)
+
+      {:ok, _view, html} = live(conn, ~p"/session/#{ctx.session.code}")
+
+      # Timer should be visible with Summary + Actions phase (shared with summary)
+      assert html =~ "facilitator-timer"
+      assert html =~ "Summary + Actions"
+    end
+
+    test "timer NOT visible in completed state", ctx do
+      {:ok, session} = Sessions.start_session(ctx.session)
+      {:ok, session} = Sessions.advance_to_scoring(session)
+      {:ok, session} = Sessions.advance_to_summary(session)
+      {:ok, session} = Sessions.advance_to_actions(session)
+      {:ok, _session} = Sessions.complete_session(session)
+
+      conn =
+        build_conn()
+        |> Plug.Test.init_test_session(%{})
+        |> put_session(:browser_token, ctx.facilitator_token)
+
+      {:ok, _view, html} = live(conn, ~p"/session/#{ctx.session.code}")
+
+      # Timer should NOT be visible in completed state
+      refute html =~ "facilitator-timer"
+    end
+
+    test "timer displays correct segment duration (100 min / 10 = 10 min per segment)", ctx do
+      {:ok, session} = Sessions.start_session(ctx.session)
+      {:ok, _session} = Sessions.advance_to_scoring(session)
+
+      conn =
+        build_conn()
+        |> Plug.Test.init_test_session(%{})
+        |> put_session(:browser_token, ctx.facilitator_token)
+
+      {:ok, _view, html} = live(conn, ~p"/session/#{ctx.session.code}")
+
+      # Timer should show ~10 minutes (600 seconds, formatted as 10:00)
+      # Note: there may be slight variations due to timing, so we check for 10: or 9:
+      assert html =~ ~r/data-total="600"/
+    end
+  end
 end
