@@ -396,11 +396,32 @@ Colors indicate how concerning a score is at a glance.
 ### Applying Traffic Lights
 
 - **Individual scores**: Each participant's score shown with traffic light color
-- **Team average**: Average score for each question shown with traffic light color
+- **Combined Team Value**: Team score for each question shown with traffic light color
 - **Summary view**: All 8 questions at a glance with color indicators
 
+### Combined Team Value
+
+The **Combined Team Value** is a score out of 10 that represents team performance on each criterion while accounting for variance. Unlike a simple average, it grades each person's score individually before combining.
+
+**How it works:**
+1. Each individual score is graded based on traffic light color:
+   - Green = 2 points (good)
+   - Amber = 1 point (medium)
+   - Red = 0 points (low)
+2. Grades are summed and divided by number of participants
+3. Result is scaled to 0-10
+
+**Interpretation:**
+| Score | Meaning |
+|-------|---------|
+| 10 | Everyone scored well (all green) |
+| 5 | Mixed results (average of amber scores) |
+| 0 | Everyone scored poorly (all red) |
+
+**Why this matters:** A simple average can hide variance. For example, if half the team scores +5 and half scores -5 on a balance question, the average is 0 (appearing optimal). The Combined Team Value would show 0/10 (all red), correctly identifying that everyone is outside the healthy range.
+
 ### End of Workshop Summary
-- Overview of all 8 questions with traffic light indicators
+- Overview of all 8 questions with Combined Team Values
 - Quickly see which areas are healthy (green) vs need attention (red)
 - Pattern recognition across the team
 

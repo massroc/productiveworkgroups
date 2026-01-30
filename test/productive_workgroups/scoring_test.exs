@@ -294,6 +294,73 @@ defmodule ProductiveWorkgroups.ScoringTest do
     end
   end
 
+  describe "color_to_grade/1" do
+    test "converts green to 2 points" do
+      assert Scoring.color_to_grade(:green) == 2
+    end
+
+    test "converts amber to 1 point" do
+      assert Scoring.color_to_grade(:amber) == 1
+    end
+
+    test "converts red to 0 points" do
+      assert Scoring.color_to_grade(:red) == 0
+    end
+
+    test "converts nil to 0 points" do
+      assert Scoring.color_to_grade(nil) == 0
+    end
+  end
+
+  describe "calculate_combined_team_value/3" do
+    test "returns nil for empty scores" do
+      assert Scoring.calculate_combined_team_value([], "balance", 0) == nil
+    end
+
+    test "returns 10 when everyone scores green on balance scale" do
+      # All scores at optimal value (0) -> all green -> all 2 points -> avg 2 -> scaled to 10
+      scores = [%{value: 0}, %{value: 1}, %{value: -1}]
+      assert Scoring.calculate_combined_team_value(scores, "balance", 0) == 10.0
+    end
+
+    test "returns 0 when everyone scores red on balance scale" do
+      # All scores far from optimal -> all red -> all 0 points -> avg 0 -> scaled to 0
+      scores = [%{value: 5}, %{value: -5}, %{value: 4}]
+      assert Scoring.calculate_combined_team_value(scores, "balance", 0) == 0.0
+    end
+
+    test "returns 5 when everyone scores amber on balance scale" do
+      # All scores medium distance from optimal -> all amber -> all 1 point -> avg 1 -> scaled to 5
+      scores = [%{value: 2}, %{value: -2}, %{value: 3}]
+      assert Scoring.calculate_combined_team_value(scores, "balance", 0) == 5.0
+    end
+
+    test "calculates mixed scores correctly on balance scale" do
+      # 1 green (2), 1 amber (1), 1 red (0) -> sum 3, avg 1 -> scaled to 5
+      scores = [%{value: 0}, %{value: 2}, %{value: 5}]
+      assert Scoring.calculate_combined_team_value(scores, "balance", 0) == 5.0
+    end
+
+    test "returns 10 when everyone scores green on maximal scale" do
+      # All scores 7+ -> all green -> all 2 points -> avg 2 -> scaled to 10
+      scores = [%{value: 10}, %{value: 8}, %{value: 7}]
+      assert Scoring.calculate_combined_team_value(scores, "maximal", nil) == 10.0
+    end
+
+    test "returns 0 when everyone scores red on maximal scale" do
+      # All scores 0-3 -> all red -> all 0 points -> avg 0 -> scaled to 0
+      scores = [%{value: 0}, %{value: 1}, %{value: 3}]
+      assert Scoring.calculate_combined_team_value(scores, "maximal", nil) == 0.0
+    end
+
+    test "calculates mixed scores correctly on maximal scale" do
+      # 2 green (4), 1 red (0) -> sum 4, avg 1.33 -> scaled to 6.7
+      scores = [%{value: 10}, %{value: 7}, %{value: 2}]
+      result = Scoring.calculate_combined_team_value(scores, "maximal", nil)
+      assert result == 6.7
+    end
+  end
+
   describe "session score summary" do
     setup do
       {:ok, template} =
@@ -346,6 +413,30 @@ defmodule ProductiveWorkgroups.ScoringTest do
 
       assert length(summaries) == 8
       assert Enum.all?(summaries, fn s -> s.count == 1 end)
+    end
+
+    test "get_all_scores_summary/1 includes combined_team_value for each question", %{
+      session: session,
+      template: template
+    } do
+      # Create multiple participants with varying scores
+      {:ok, p1} = Sessions.join_session(session, "Alice", Ecto.UUID.generate())
+      {:ok, p2} = Sessions.join_session(session, "Bob", Ecto.UUID.generate())
+      {:ok, p3} = Sessions.join_session(session, "Charlie", Ecto.UUID.generate())
+
+      # Submit scores for first balance question (optimal at 0)
+      # Alice: 0 (green), Bob: 2 (amber), Charlie: 5 (red)
+      # Grades: 2 + 1 + 0 = 3, avg = 1, scaled to 5
+      Scoring.submit_score(session, p1, 0, 0)
+      Scoring.submit_score(session, p2, 0, 2)
+      Scoring.submit_score(session, p3, 0, 5)
+
+      summaries = Scoring.get_all_scores_summary(session, template)
+      first_summary = Enum.find(summaries, fn s -> s.question_index == 0 end)
+
+      assert first_summary.combined_team_value == 5.0
+      assert first_summary.average != nil
+      assert first_summary.color != nil
     end
   end
 

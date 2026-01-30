@@ -208,7 +208,9 @@ defmodule ProductiveWorkgroups.Scoring do
           if(summary.average,
             do: traffic_light_color(question.scale_type, summary.average, question.optimal_value),
             else: nil
-          )
+          ),
+        combined_team_value:
+          calculate_combined_team_value(scores, question.scale_type, question.optimal_value)
       })
     end)
   end
@@ -261,6 +263,48 @@ defmodule ProductiveWorkgroups.Scoring do
       value >= 4 -> :amber
       true -> :red
     end
+  end
+
+  @doc """
+  Converts a traffic light color to grade points.
+
+  - Green: 2 points (good)
+  - Amber: 1 point (medium)
+  - Red: 0 points (low)
+  """
+  def color_to_grade(:green), do: 2
+  def color_to_grade(:amber), do: 1
+  def color_to_grade(:red), do: 0
+  def color_to_grade(_), do: 0
+
+  @doc """
+  Calculates the Combined Team Value for a question.
+
+  This score represents how well the team is performing on this criterion,
+  accounting for variance by grading individual scores:
+  - Each person's score is graded: green = 2, amber = 1, red = 0
+  - Grades are summed and divided by number of participants
+  - Result is scaled to 0-10
+
+  A score of 10 means everyone had a "good" score.
+  A score of 0 means everyone had a "low" score.
+  """
+  def calculate_combined_team_value([], _scale_type, _optimal_value), do: nil
+
+  def calculate_combined_team_value(scores, scale_type, optimal_value) do
+    grades =
+      Enum.map(scores, fn score ->
+        color = traffic_light_color(scale_type, score.value, optimal_value)
+        color_to_grade(color)
+      end)
+
+    total_grades = Enum.sum(grades)
+    num_participants = length(grades)
+
+    # Scale from 0-2 average to 0-10
+    # Max possible: 2 (everyone green) * 5 = 10
+    # Min possible: 0 (everyone red) * 5 = 0
+    Float.round(total_grades / num_participants * 5, 1)
   end
 
   @doc """

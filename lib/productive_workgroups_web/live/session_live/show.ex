@@ -527,32 +527,6 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
   end
 
   @impl true
-  def handle_event("toggle_action", %{"id" => action_id}, socket) do
-    session = socket.assigns.session
-    action = Enum.find(socket.assigns.all_actions, &(&1.id == action_id))
-
-    if action do
-      result =
-        if action.completed do
-          Notes.uncomplete_action(action)
-        else
-          Notes.complete_action(action)
-        end
-
-      case result do
-        {:ok, _} ->
-          broadcast_action_update(session, action_id)
-          {:noreply, load_actions_data(socket, session)}
-
-        {:error, _} ->
-          {:noreply, put_flash(socket, :error, "Failed to update action")}
-      end
-    else
-      {:noreply, socket}
-    end
-  end
-
-  @impl true
   def handle_event("delete_action", %{"id" => action_id}, socket) do
     session = socket.assigns.session
     action = Enum.find(socket.assigns.all_actions, &(&1.id == action_id))
@@ -974,18 +948,14 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
   defp load_actions_data(socket, session) do
     if session.state in ["summary", "actions", "completed"] do
       actions = Notes.list_all_actions(session)
-      action_count = length(actions)
-      completed_count = Enum.count(actions, & &1.completed)
 
       socket
       |> assign(all_actions: actions)
-      |> assign(action_count: action_count)
-      |> assign(completed_action_count: completed_count)
+      |> assign(action_count: length(actions))
     else
       socket
       |> assign(all_actions: [])
       |> assign(action_count: 0)
-      |> assign(completed_action_count: 0)
     end
   end
 
@@ -1694,7 +1664,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
                   </div>
                 </div>
                 <div class="text-right">
-                  <%= if score.average do %>
+                  <%= if score.combined_team_value do %>
                     <div class={[
                       "text-2xl font-bold",
                       case score.color do
@@ -1704,9 +1674,24 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
                         _ -> "text-gray-400"
                       end
                     ]}>
-                      {format_score(score.average, score.scale_type)}
+                      {score.combined_team_value}/10
                     </div>
-                    <div class="text-xs text-gray-500">avg</div>
+                    <div class="flex items-center justify-end gap-1 text-xs text-gray-500">
+                      <span>team</span>
+                      <span
+                        class="cursor-help"
+                        title="Combined Team Value: A team rating out of 10 for this criterion. Each person's score is graded (green=2, amber=1, red=0), then averaged and scaled. 10 = everyone scored well, 0 = everyone scored poorly."
+                      >
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                      </span>
+                    </div>
                   <% else %>
                     <div class="text-gray-500 text-sm">No scores</div>
                   <% end %>
@@ -1790,14 +1775,6 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
     """
   end
 
-  defp format_score(nil, _scale_type), do: "—"
-
-  defp format_score(value, "balance") do
-    if value > 0, do: "+#{value}", else: "#{value}"
-  end
-
-  defp format_score(value, _scale_type), do: "#{value}"
-
   defp render_actions(assigns) do
     ~H"""
     <div class="flex flex-col items-center min-h-screen px-4 py-8">
@@ -1807,11 +1784,6 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
           <p class="text-gray-400">
             Capture commitments and next steps from your discussion.
           </p>
-          <%= if @action_count > 0 do %>
-            <p class="text-sm text-gray-500 mt-2">
-              {@completed_action_count}/{@action_count} completed
-            </p>
-          <% end %>
         </div>
         
     <!-- Create Action Form -->
@@ -1863,31 +1835,9 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
     assigns = Map.put(assigns, :action, action)
 
     ~H"""
-    <li class={[
-      "rounded-lg p-3 flex items-start gap-3",
-      if(@action.completed, do: "bg-gray-700/50", else: "bg-gray-700")
-    ]}>
-      <button
-        type="button"
-        phx-click="toggle_action"
-        phx-value-id={@action.id}
-        class={[
-          "mt-1 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
-          if(@action.completed,
-            do: "bg-green-600 border-green-600 text-white",
-            else: "border-gray-500 hover:border-green-500"
-          )
-        ]}
-      >
-        <%= if @action.completed do %>
-          <span class="text-xs">✓</span>
-        <% end %>
-      </button>
+    <li class="rounded-lg p-3 flex items-start gap-3 bg-gray-700">
       <div class="flex-1">
-        <p class={[
-          "text-gray-300",
-          if(@action.completed, do: "line-through text-gray-500")
-        ]}>
+        <p class="text-gray-300">
           {@action.description}
         </p>
         <%= if @action.owner_name && @action.owner_name != "" do %>
@@ -1946,8 +1896,8 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
                     _ -> "text-gray-400"
                   end
                 ]}>
-                  <%= if score.average do %>
-                    {format_score(score.average, score.scale_type)}
+                  <%= if score.combined_team_value do %>
+                    {score.combined_team_value}/10
                   <% else %>
                     —
                   <% end %>
@@ -1957,6 +1907,22 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
                 </div>
               </div>
             <% end %>
+          </div>
+          <div class="flex items-center justify-center gap-1 text-xs text-gray-500 mt-2">
+            <span>Combined Team Values</span>
+            <span
+              class="cursor-help"
+              title="Each person's score is graded (green=2, amber=1, red=0), then averaged and scaled to 0-10. 10 = everyone scored well, 0 = everyone scored poorly."
+            >
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </span>
           </div>
         </div>
         
@@ -1975,7 +1941,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
                       <span class="text-green-400">✓</span>
                       <span>{item.title}</span>
                       <span class="text-green-400 font-semibold ml-auto">
-                        {format_score(item.average, item.scale_type)}
+                        {item.combined_team_value}/10
                       </span>
                     </li>
                   <% end %>
@@ -1995,7 +1961,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
                       <span class="text-red-400">!</span>
                       <span>{item.title}</span>
                       <span class="text-red-400 font-semibold ml-auto">
-                        {format_score(item.average, item.scale_type)}
+                        {item.combined_team_value}/10
                       </span>
                     </li>
                   <% end %>
@@ -2009,11 +1975,6 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
         <div class="bg-gray-800 rounded-lg p-4 mb-6">
           <h2 class="text-lg font-semibold text-white mb-3">
             Action Items
-            <%= if @action_count > 0 do %>
-              <span class="text-sm font-normal text-gray-400">
-                ({@completed_action_count}/{@action_count} completed)
-              </span>
-            <% end %>
           </h2>
           
     <!-- Add Action Form -->

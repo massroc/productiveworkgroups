@@ -75,9 +75,8 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.ActionFormComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="bg-gray-800 rounded-lg p-6 mb-6">
-      <h2 class="text-lg font-semibold text-white mb-4">Add Action Item</h2>
-      <form phx-submit="create_action" phx-target={@myself} class="space-y-4">
+    <div class="mb-4">
+      <form phx-submit="create_action" phx-target={@myself} class="space-y-3">
         <div>
           <label class="block text-sm text-gray-400 mb-1">What needs to be done?</label>
           <input
