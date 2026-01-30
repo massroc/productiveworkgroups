@@ -364,7 +364,7 @@ defmodule ProductiveWorkgroups.Sessions do
   def list_participants(%Session{} = session) do
     Participant
     |> where([p], p.session_id == ^session.id)
-    |> order_by([p], p.joined_at)
+    |> order_by([p], [p.joined_at, p.id])
     |> Repo.all()
   end
 
@@ -374,7 +374,7 @@ defmodule ProductiveWorkgroups.Sessions do
   def list_active_participants(%Session{} = session) do
     Participant
     |> where([p], p.session_id == ^session.id and p.status == "active")
-    |> order_by([p], p.joined_at)
+    |> order_by([p], [p.joined_at, p.id])
     |> Repo.all()
   end
 
