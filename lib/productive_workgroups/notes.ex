@@ -85,13 +85,11 @@ defmodule ProductiveWorkgroups.Notes do
 
   @doc """
   Creates an action for a session.
-
-  Pass `question_index: nil` for general session actions,
-  or a specific index for question-related actions.
+  Actions are session-level and not tied to specific questions.
   """
-  def create_action(%Session{} = session, question_index, attrs) do
+  def create_action(%Session{} = session, attrs) do
     %Action{}
-    |> Action.create_changeset(session, question_index, attrs)
+    |> Action.create_changeset(session, attrs)
     |> Repo.insert()
   end
 
@@ -130,32 +128,12 @@ defmodule ProductiveWorkgroups.Notes do
   end
 
   @doc """
-  Lists actions for a specific question.
-  """
-  def list_actions_for_question(%Session{} = session, question_index) do
-    Action
-    |> where([a], a.session_id == ^session.id and a.question_index == ^question_index)
-    |> order_by([a], a.inserted_at)
-    |> Repo.all()
-  end
-
-  @doc """
-  Lists general (non-question-specific) actions for a session.
-  """
-  def list_general_actions(%Session{} = session) do
-    Action
-    |> where([a], a.session_id == ^session.id and is_nil(a.question_index))
-    |> order_by([a], a.inserted_at)
-    |> Repo.all()
-  end
-
-  @doc """
-  Lists all actions for a session.
+  Lists all actions for a session, ordered by creation time.
   """
   def list_all_actions(%Session{} = session) do
     Action
     |> where([a], a.session_id == ^session.id)
-    |> order_by([a], [a.question_index, a.inserted_at])
+    |> order_by([a], a.inserted_at)
     |> Repo.all()
   end
 

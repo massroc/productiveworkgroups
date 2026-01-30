@@ -13,23 +13,12 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.ActionFormComponent do
     {:ok,
      socket
      |> assign(action_description: "")
-     |> assign(action_owner: "")
-     |> assign(action_question: nil)}
+     |> assign(action_owner: "")}
   end
 
   @impl true
   def update(assigns, socket) do
-    # Use preselected_question if provided and action_question is not set
-    preselected = Map.get(assigns, :preselected_question)
-
-    socket =
-      if preselected != nil and socket.assigns.action_question == nil do
-        assign(socket, action_question: preselected)
-      else
-        socket
-      end
-
-    {:ok, assign(socket, session: assigns.session, scores_summary: assigns.scores_summary)}
+    {:ok, assign(socket, session: assigns.session)}
   end
 
   @impl true
@@ -43,17 +32,6 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.ActionFormComponent do
   end
 
   @impl true
-  def handle_event("update_action_question", %{"question" => value}, socket) do
-    question_index =
-      case value do
-        "" -> nil
-        v -> String.to_integer(v)
-      end
-
-    {:noreply, assign(socket, action_question: question_index)}
-  end
-
-  @impl true
   def handle_event("create_action", _params, socket) do
     description = String.trim(socket.assigns.action_description)
 
@@ -62,14 +40,13 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.ActionFormComponent do
       {:noreply, socket}
     else
       session = socket.assigns.session
-      question_index = socket.assigns.action_question
 
       attrs = %{
         description: description,
         owner_name: String.trim(socket.assigns.action_owner)
       }
 
-      case Notes.create_action(session, question_index, attrs) do
+      case Notes.create_action(session, attrs) do
         {:ok, action} ->
           broadcast_action_update(session, action.id)
           # Notify parent to reload actions
@@ -78,8 +55,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.ActionFormComponent do
           {:noreply,
            socket
            |> assign(action_description: "")
-           |> assign(action_owner: "")
-           |> assign(action_question: nil)}
+           |> assign(action_owner: "")}
 
         {:error, _} ->
           send(self(), {:flash, :error, "Failed to create action"})
@@ -115,39 +91,18 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.ActionFormComponent do
             class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
           />
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm text-gray-400 mb-1">Owner (optional)</label>
-            <input
-              type="text"
-              name="owner"
-              value={@action_owner}
-              phx-change="update_action_owner"
-              phx-target={@myself}
-              phx-debounce="300"
-              placeholder="Who will do this?"
-              class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
-            />
-          </div>
-          <div>
-            <label class="block text-sm text-gray-400 mb-1">Related Question (optional)</label>
-            <select
-              name="question"
-              phx-change="update_action_question"
-              phx-target={@myself}
-              class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-green-500"
-            >
-              <option value="">General action</option>
-              <%= for score <- @scores_summary do %>
-                <option
-                  value={score.question_index}
-                  selected={@action_question == score.question_index}
-                >
-                  Q{score.question_index + 1}: {score.title}
-                </option>
-              <% end %>
-            </select>
-          </div>
+        <div>
+          <label class="block text-sm text-gray-400 mb-1">Owner (optional)</label>
+          <input
+            type="text"
+            name="owner"
+            value={@action_owner}
+            phx-change="update_action_owner"
+            phx-target={@myself}
+            phx-debounce="300"
+            placeholder="Who will do this?"
+            class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+          />
         </div>
         <button
           type="submit"

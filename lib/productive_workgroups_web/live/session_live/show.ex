@@ -464,22 +464,6 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
     end
   end
 
-  @impl true
-  def handle_event("open_action_modal", %{"question" => question_str}, socket) do
-    question_index =
-      case question_str do
-        "" -> nil
-        q -> String.to_integer(q)
-      end
-
-    {:noreply, assign(socket, action_modal_question: question_index)}
-  end
-
-  @impl true
-  def handle_event("close_action_modal", _params, socket) do
-    {:noreply, assign(socket, action_modal_question: nil)}
-  end
-
   # Private helper functions
 
   defp do_go_back(socket) do
@@ -793,7 +777,6 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
       |> assign(strengths: Map.get(grouped, :green, []))
       |> assign(concerns: Map.get(grouped, :red, []))
       |> assign(neutral: Map.get(grouped, :amber, []))
-      |> assign(action_modal_question: nil)
     else
       socket
       |> assign(summary_template: nil)
@@ -804,7 +787,6 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
       |> assign(strengths: [])
       |> assign(concerns: [])
       |> assign(neutral: [])
-      |> assign(action_modal_question: nil)
     end
   end
 
@@ -1458,13 +1440,6 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
   end
 
   defp render_summary(assigns) do
-    # Group actions by question
-    grouped_actions = Enum.group_by(assigns.all_actions, & &1.question_index)
-
-    assigns =
-      assigns
-      |> Map.put(:grouped_actions, grouped_actions)
-
     ~H"""
     <div class="flex flex-col items-center min-h-screen px-4 py-8">
       <div class="max-w-4xl w-full">
@@ -1543,11 +1518,10 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
           </div>
         <% end %>
         
-    <!-- All Questions with Individual Scores, Notes, and Actions -->
+    <!-- All Questions with Individual Scores and Notes -->
         <div class="space-y-4 mb-6">
           <%= for score <- @scores_summary do %>
             <% question_notes = Map.get(@notes_by_question, score.question_index, []) %>
-            <% question_actions = Map.get(@grouped_actions, score.question_index, []) %>
             <% question_scores = Map.get(@individual_scores, score.question_index, []) %>
             <div class={[
               "rounded-lg p-4 border",
@@ -1595,7 +1569,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
               
     <!-- Individual Scores - 10 horizontal boxes -->
               <%= if length(question_scores) > 0 do %>
-                <div class="flex flex-wrap gap-1.5 mb-3">
+                <div class="flex flex-wrap gap-1.5">
                   <%= for s <- question_scores do %>
                     <div
                       class={[
@@ -1643,69 +1617,79 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
                   </ul>
                 </div>
               <% end %>
-              
-    <!-- Actions for this question (inline) -->
-              <%= if length(question_actions) > 0 do %>
-                <div class="mt-3 pt-3 border-t border-gray-700/50">
-                  <div class="text-xs text-gray-500 mb-2">Actions</div>
-                  <ul class="space-y-1.5">
-                    <%= for action <- question_actions do %>
-                      <li class="flex items-start gap-2 text-sm">
-                        <button
-                          type="button"
-                          phx-click="toggle_action"
-                          phx-value-id={action.id}
-                          class={[
-                            "mt-0.5 w-4 h-4 rounded border flex items-center justify-center flex-shrink-0",
-                            if(action.completed,
-                              do: "bg-green-600 border-green-600 text-white",
-                              else: "border-gray-500 hover:border-green-500"
-                            )
-                          ]}
-                        >
-                          <%= if action.completed do %>
-                            <span class="text-xs">✓</span>
-                          <% end %>
-                        </button>
-                        <span class={[
-                          "text-gray-300",
-                          if(action.completed, do: "line-through text-gray-500")
-                        ]}>
-                          {action.description}
-                          <%= if action.owner_name && action.owner_name != "" do %>
-                            <span class="text-xs text-gray-500">— {action.owner_name}</span>
-                          <% end %>
-                        </span>
-                        <button
-                          type="button"
-                          phx-click="delete_action"
-                          phx-value-id={action.id}
-                          class="ml-auto text-gray-500 hover:text-red-400 transition-colors text-xs"
-                          title="Delete action"
-                        >
-                          ✕
-                        </button>
-                      </li>
-                    <% end %>
-                  </ul>
-                </div>
-              <% end %>
-              
-    <!-- Add Action button -->
-              <div class="mt-3 pt-3 border-t border-gray-700/50">
-                <button
-                  type="button"
-                  phx-click={
-                    JS.push("open_action_modal", value: %{question: score.question_index})
-                    |> ProductiveWorkgroupsWeb.CoreComponents.show_modal("action-modal")
-                  }
-                  class="text-sm text-green-400 hover:text-green-300 transition-colors flex items-center gap-1"
-                >
-                  <span>+</span>
-                  <span>Add Action</span>
-                </button>
-              </div>
             </div>
+          <% end %>
+        </div>
+        
+    <!-- Action Items Section -->
+        <div class="bg-gray-800 rounded-lg p-6 mb-6">
+          <h2 class="text-xl font-semibold text-white mb-4">
+            Action Items
+            <%= if @action_count > 0 do %>
+              <span class="text-sm font-normal text-gray-400">
+                ({@completed_action_count}/{@action_count} completed)
+              </span>
+            <% end %>
+          </h2>
+          
+    <!-- Add Action Form -->
+          <.live_component
+            module={ActionFormComponent}
+            id="action-form"
+            session={@session}
+          />
+          
+    <!-- Existing Actions -->
+          <%= if @action_count > 0 do %>
+            <ul class="space-y-3">
+              <%= for action <- @all_actions do %>
+                <li class={[
+                  "rounded-lg p-3 flex items-start gap-3",
+                  if(action.completed, do: "bg-gray-700/50", else: "bg-gray-700")
+                ]}>
+                  <button
+                    type="button"
+                    phx-click="toggle_action"
+                    phx-value-id={action.id}
+                    class={[
+                      "mt-1 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
+                      if(action.completed,
+                        do: "bg-green-600 border-green-600 text-white",
+                        else: "border-gray-500 hover:border-green-500"
+                      )
+                    ]}
+                  >
+                    <%= if action.completed do %>
+                      <span class="text-xs">✓</span>
+                    <% end %>
+                  </button>
+                  <div class="flex-1">
+                    <p class={[
+                      "text-gray-300",
+                      if(action.completed, do: "line-through text-gray-500")
+                    ]}>
+                      {action.description}
+                    </p>
+                    <%= if action.owner_name && action.owner_name != "" do %>
+                      <p class="text-sm text-gray-500 mt-1">Owner: {action.owner_name}</p>
+                    <% end %>
+                  </div>
+                  <button
+                    type="button"
+                    phx-click="delete_action"
+                    phx-value-id={action.id}
+                    class="text-gray-500 hover:text-red-400 transition-colors text-sm"
+                    title="Delete action"
+                  >
+                    ✕
+                  </button>
+                </li>
+              <% end %>
+            </ul>
+          <% else %>
+            <p class="text-gray-400 text-center py-4">
+              No action items yet. Add your first action above.
+            </p>
           <% end %>
         </div>
         
@@ -1728,25 +1712,6 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
           <% end %>
         </div>
       </div>
-      
-    <!-- Action Modal -->
-      <.modal id="action-modal" on_cancel={JS.push("close_action_modal")}>
-        <h2 class="text-xl font-semibold text-white mb-4">Add Action Item</h2>
-        <p class="text-sm text-gray-400 mb-4">
-          <%= if @action_modal_question do %>
-            For Question {@action_modal_question + 1}
-          <% else %>
-            General action
-          <% end %>
-        </p>
-        <.live_component
-          module={ActionFormComponent}
-          id="action-form-modal"
-          session={@session}
-          scores_summary={@scores_summary}
-          preselected_question={@action_modal_question}
-        />
-      </.modal>
     </div>
     """
   end
@@ -1760,20 +1725,6 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
   defp format_score(value, _scale_type), do: "#{value}"
 
   defp render_actions(assigns) do
-    # Group actions by question
-    grouped_actions = Enum.group_by(assigns.all_actions, & &1.question_index)
-    general_actions = Map.get(grouped_actions, nil, [])
-
-    question_actions =
-      grouped_actions
-      |> Map.drop([nil])
-      |> Enum.sort_by(fn {idx, _} -> idx end)
-
-    assigns =
-      assigns
-      |> Map.put(:general_actions, general_actions)
-      |> Map.put(:question_actions, question_actions)
-
     ~H"""
     <div class="flex flex-col items-center min-h-screen px-4 py-8">
       <div class="max-w-3xl w-full">
@@ -1794,39 +1745,16 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
           module={ActionFormComponent}
           id="action-form"
           session={@session}
-          scores_summary={@scores_summary}
         />
         
     <!-- Existing Actions -->
         <%= if @action_count > 0 do %>
-          <div class="space-y-6">
-            <!-- General Actions -->
-            <%= if length(@general_actions) > 0 do %>
-              <div class="bg-gray-800 rounded-lg p-6">
-                <h3 class="text-lg font-semibold text-white mb-4">General Actions</h3>
-                <ul class="space-y-3">
-                  <%= for action <- @general_actions do %>
-                    {render_action_item(assigns, action)}
-                  <% end %>
-                </ul>
-              </div>
-            <% end %>
-            
-    <!-- Actions by Question -->
-            <%= for {question_index, actions} <- @question_actions do %>
-              <div class="bg-gray-800 rounded-lg p-6">
-                <h3 class="text-lg font-semibold text-white mb-4">
-                  <% question =
-                    Enum.find(@scores_summary, fn s -> s.question_index == question_index end) %> Q{question_index +
-                    1}: {if question, do: question.title, else: "Unknown"}
-                </h3>
-                <ul class="space-y-3">
-                  <%= for action <- actions do %>
-                    {render_action_item(assigns, action)}
-                  <% end %>
-                </ul>
-              </div>
-            <% end %>
+          <div class="bg-gray-800 rounded-lg p-6">
+            <ul class="space-y-3">
+              <%= for action <- @all_actions do %>
+                {render_action_item(assigns, action)}
+              <% end %>
+            </ul>
           </div>
         <% else %>
           <div class="bg-gray-800 rounded-lg p-6 text-center">
@@ -1906,20 +1834,6 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
   end
 
   defp render_completed(assigns) do
-    # Group actions by question for display
-    grouped_actions = Enum.group_by(assigns.all_actions, & &1.question_index)
-    general_actions = Map.get(grouped_actions, nil, [])
-
-    question_actions =
-      grouped_actions
-      |> Map.drop([nil])
-      |> Enum.sort_by(fn {idx, _} -> idx end)
-
-    assigns =
-      assigns
-      |> Map.put(:general_actions, general_actions)
-      |> Map.put(:question_actions, question_actions)
-
     ~H"""
     <div class="flex flex-col items-center min-h-screen px-4 py-8">
       <div class="max-w-4xl w-full">
@@ -2001,55 +1915,21 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
               {@completed_action_count}/{@action_count} completed
             </p>
 
-            <div class="space-y-4">
-              <!-- General Actions -->
-              <%= if length(@general_actions) > 0 do %>
-                <div>
-                  <h3 class="text-sm font-semibold text-gray-400 mb-2">General Actions</h3>
-                  <ul class="space-y-2">
-                    <%= for action <- @general_actions do %>
-                      <li class="flex items-start gap-2 text-gray-300">
-                        <span class={if action.completed, do: "text-green-400", else: "text-gray-500"}>
-                          {if action.completed, do: "✓", else: "○"}
-                        </span>
-                        <div class={if action.completed, do: "line-through text-gray-500"}>
-                          {action.description}
-                          <%= if action.owner_name && action.owner_name != "" do %>
-                            <span class="text-gray-500 text-sm">— {action.owner_name}</span>
-                          <% end %>
-                        </div>
-                      </li>
+            <ul class="space-y-2">
+              <%= for action <- @all_actions do %>
+                <li class="flex items-start gap-2 text-gray-300">
+                  <span class={if action.completed, do: "text-green-400", else: "text-gray-500"}>
+                    {if action.completed, do: "✓", else: "○"}
+                  </span>
+                  <div class={if action.completed, do: "line-through text-gray-500"}>
+                    {action.description}
+                    <%= if action.owner_name && action.owner_name != "" do %>
+                      <span class="text-gray-500 text-sm">— {action.owner_name}</span>
                     <% end %>
-                  </ul>
-                </div>
+                  </div>
+                </li>
               <% end %>
-              
-    <!-- Question-linked Actions -->
-              <%= for {question_index, actions} <- @question_actions do %>
-                <div>
-                  <% question =
-                    Enum.find(@scores_summary, fn s -> s.question_index == question_index end) %>
-                  <h3 class="text-sm font-semibold text-gray-400 mb-2">
-                    Q{question_index + 1}: {if question, do: question.title, else: "Unknown"}
-                  </h3>
-                  <ul class="space-y-2">
-                    <%= for action <- actions do %>
-                      <li class="flex items-start gap-2 text-gray-300">
-                        <span class={if action.completed, do: "text-green-400", else: "text-gray-500"}>
-                          {if action.completed, do: "✓", else: "○"}
-                        </span>
-                        <div class={if action.completed, do: "line-through text-gray-500"}>
-                          {action.description}
-                          <%= if action.owner_name && action.owner_name != "" do %>
-                            <span class="text-gray-500 text-sm">— {action.owner_name}</span>
-                          <% end %>
-                        </div>
-                      </li>
-                    <% end %>
-                  </ul>
-                </div>
-              <% end %>
-            </div>
+            </ul>
           </div>
         <% end %>
         

@@ -117,66 +117,45 @@ defmodule ProductiveWorkgroups.NotesTest do
       %{session: session}
     end
 
-    test "create_action/3 creates a question action", %{session: session} do
+    test "create_action/2 creates a session action", %{session: session} do
       assert {:ok, %Action{} = action} =
-               Notes.create_action(session, 0, %{
+               Notes.create_action(session, %{
                  description: "Follow up on elbow room concerns",
                  owner_name: "Alice"
                })
 
       assert action.description == "Follow up on elbow room concerns"
       assert action.owner_name == "Alice"
-      assert action.question_index == 0
       assert action.completed == false
       assert action.session_id == session.id
     end
 
-    test "create_action/3 creates a general session action", %{session: session} do
+    test "create_action/2 creates action without owner", %{session: session} do
       assert {:ok, %Action{} = action} =
-               Notes.create_action(session, nil, %{
+               Notes.create_action(session, %{
                  description: "Schedule follow-up meeting"
                })
 
-      assert action.question_index == nil
       assert action.owner_name == nil
     end
 
-    test "create_action/3 requires description", %{session: session} do
-      assert {:error, changeset} = Notes.create_action(session, 0, %{owner_name: "Alice"})
+    test "create_action/2 requires description", %{session: session} do
+      assert {:error, changeset} = Notes.create_action(session, %{owner_name: "Alice"})
       assert "can't be blank" in errors_on(changeset).description
     end
 
-    test "list_actions_for_question/2 returns actions for a specific question", %{
-      session: session
-    } do
-      {:ok, _} = Notes.create_action(session, 0, %{description: "Action for Q1"})
-      {:ok, _} = Notes.create_action(session, 0, %{description: "Another action for Q1"})
-      {:ok, _} = Notes.create_action(session, 1, %{description: "Action for Q2"})
-
-      actions = Notes.list_actions_for_question(session, 0)
-      assert length(actions) == 2
-    end
-
-    test "list_general_actions/1 returns session-wide actions", %{session: session} do
-      {:ok, _} = Notes.create_action(session, nil, %{description: "General action 1"})
-      {:ok, _} = Notes.create_action(session, nil, %{description: "General action 2"})
-      {:ok, _} = Notes.create_action(session, 0, %{description: "Question action"})
-
-      actions = Notes.list_general_actions(session)
-      assert length(actions) == 2
-    end
-
-    test "list_all_actions/1 returns all session actions", %{session: session} do
-      {:ok, _} = Notes.create_action(session, nil, %{description: "General"})
-      {:ok, _} = Notes.create_action(session, 0, %{description: "Q1"})
-      {:ok, _} = Notes.create_action(session, 1, %{description: "Q2"})
+    test "list_all_actions/1 returns all session actions in order", %{session: session} do
+      {:ok, _} = Notes.create_action(session, %{description: "First"})
+      {:ok, _} = Notes.create_action(session, %{description: "Second"})
+      {:ok, _} = Notes.create_action(session, %{description: "Third"})
 
       actions = Notes.list_all_actions(session)
       assert length(actions) == 3
+      assert Enum.map(actions, & &1.description) == ["First", "Second", "Third"]
     end
 
     test "update_action/2 updates description and owner", %{session: session} do
-      {:ok, action} = Notes.create_action(session, 0, %{description: "Original"})
+      {:ok, action} = Notes.create_action(session, %{description: "Original"})
 
       {:ok, updated} =
         Notes.update_action(action, %{description: "Updated", owner_name: "Bob"})
@@ -186,7 +165,7 @@ defmodule ProductiveWorkgroups.NotesTest do
     end
 
     test "complete_action/1 marks action as completed", %{session: session} do
-      {:ok, action} = Notes.create_action(session, 0, %{description: "To complete"})
+      {:ok, action} = Notes.create_action(session, %{description: "To complete"})
       assert action.completed == false
 
       {:ok, completed} = Notes.complete_action(action)
@@ -194,7 +173,7 @@ defmodule ProductiveWorkgroups.NotesTest do
     end
 
     test "uncomplete_action/1 marks action as not completed", %{session: session} do
-      {:ok, action} = Notes.create_action(session, 0, %{description: "To toggle"})
+      {:ok, action} = Notes.create_action(session, %{description: "To toggle"})
       {:ok, action} = Notes.complete_action(action)
       assert action.completed == true
 
@@ -203,24 +182,24 @@ defmodule ProductiveWorkgroups.NotesTest do
     end
 
     test "delete_action/1 removes the action", %{session: session} do
-      {:ok, action} = Notes.create_action(session, 0, %{description: "To delete"})
+      {:ok, action} = Notes.create_action(session, %{description: "To delete"})
 
       assert {:ok, _} = Notes.delete_action(action)
-      assert Notes.list_actions_for_question(session, 0) == []
+      assert Notes.list_all_actions(session) == []
     end
 
     test "count_actions/1 returns total action count", %{session: session} do
       assert Notes.count_actions(session) == 0
 
-      {:ok, _} = Notes.create_action(session, 0, %{description: "Action 1"})
-      {:ok, _} = Notes.create_action(session, 1, %{description: "Action 2"})
+      {:ok, _} = Notes.create_action(session, %{description: "Action 1"})
+      {:ok, _} = Notes.create_action(session, %{description: "Action 2"})
 
       assert Notes.count_actions(session) == 2
     end
 
     test "count_completed_actions/1 returns completed action count", %{session: session} do
-      {:ok, a1} = Notes.create_action(session, 0, %{description: "Action 1"})
-      {:ok, _a2} = Notes.create_action(session, 1, %{description: "Action 2"})
+      {:ok, a1} = Notes.create_action(session, %{description: "Action 1"})
+      {:ok, _a2} = Notes.create_action(session, %{description: "Action 2"})
 
       assert Notes.count_completed_actions(session) == 0
 

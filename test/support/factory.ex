@@ -163,19 +163,11 @@ defmodule ProductiveWorkgroups.Factory do
   # Action factory
   def action_factory do
     %Action{
-      question_index: 0,
       description: sequence(:action_description, &"Action item #{&1}"),
       owner_name: nil,
       completed: false,
       session: build(:session)
     }
-  end
-
-  def general_action_factory do
-    struct!(
-      action_factory(),
-      %{question_index: nil}
-    )
   end
 
   # Timer factory

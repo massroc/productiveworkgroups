@@ -3,8 +3,7 @@ defmodule ProductiveWorkgroups.Notes.Action do
   Schema for action items.
 
   Actions capture commitments and next steps from the workshop.
-  They can be associated with a specific question (via question_index)
-  or be general session-wide actions (when question_index is nil).
+  They are session-level items not tied to specific questions.
   """
   use Ecto.Schema
   import Ecto.Changeset
@@ -12,7 +11,6 @@ defmodule ProductiveWorkgroups.Notes.Action do
   alias ProductiveWorkgroups.Sessions.Session
 
   schema "actions" do
-    field :question_index, :integer
     field :description, :string
     field :owner_name, :string
     field :completed, :boolean, default: false
@@ -25,7 +23,7 @@ defmodule ProductiveWorkgroups.Notes.Action do
   @doc false
   def changeset(action, attrs) do
     action
-    |> cast(attrs, [:question_index, :description, :owner_name, :completed])
+    |> cast(attrs, [:description, :owner_name, :completed])
     |> validate_required([:description])
     |> validate_length(:description, min: 1, max: 1000)
     |> validate_length(:owner_name, max: 100)
@@ -34,9 +32,9 @@ defmodule ProductiveWorkgroups.Notes.Action do
   @doc """
   Changeset for creating an action.
   """
-  def create_changeset(action, session, question_index, attrs) do
+  def create_changeset(action, session, attrs) do
     action
-    |> changeset(Map.put(attrs, :question_index, question_index))
+    |> changeset(attrs)
     |> put_assoc(:session, session)
   end
 
