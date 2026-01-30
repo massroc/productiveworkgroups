@@ -273,9 +273,10 @@ defmodule ProductiveWorkgroups.Sessions do
   end
 
   @doc """
-  Goes back from actions to summary.
+  Goes back from actions or completed (wrap-up) to summary.
   """
-  def go_back_to_summary(%Session{state: "actions"} = session) do
+  def go_back_to_summary(%Session{state: state} = session)
+      when state in ["actions", "completed"] do
     result =
       session
       |> Session.transition_changeset("summary")

@@ -891,7 +891,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLiveTest do
       assert html =~ "Workshop Summary"
     end
 
-    test "back button is not shown in completed state", ctx do
+    test "back button is shown in completed state and goes to summary", ctx do
       # Advance to completed
       {:ok, session} = Sessions.start_session(ctx.session)
       {:ok, session} = Sessions.advance_to_scoring(session)
@@ -904,13 +904,17 @@ defmodule ProductiveWorkgroupsWeb.SessionLiveTest do
         |> Plug.Test.init_test_session(%{})
         |> put_session(:browser_token, ctx.facilitator_token)
 
-      {:ok, _view, html} = live(conn, ~p"/session/#{ctx.session.code}")
+      {:ok, view, html} = live(conn, ~p"/session/#{ctx.session.code}")
 
       # Should be at wrap-up (completed state)
       assert html =~ "Workshop Wrap-Up"
 
-      # Back button should not be visible
-      refute html =~ "go_back"
+      # Back button should be visible
+      assert html =~ "go_back"
+
+      # Click back button - should go to summary
+      html = view |> element("button", "Back") |> render_click()
+      assert html =~ "Workshop Summary"
     end
   end
 

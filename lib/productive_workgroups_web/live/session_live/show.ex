@@ -676,8 +676,23 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
     end
   end
 
+  defp do_go_back_from_state(socket, session, "completed") do
+    Sessions.reset_all_ready(session)
+
+    case Sessions.go_back_to_summary(session) do
+      {:ok, updated_session} ->
+        {:noreply,
+         socket
+         |> assign(session: updated_session)
+         |> load_summary_data(updated_session)}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Failed to go back")}
+    end
+  end
+
   defp do_go_back_from_state(socket, _session, _state) do
-    # Cannot go back from lobby, intro, or completed
+    # Cannot go back from lobby or intro
     {:noreply, socket}
   end
 
@@ -1020,7 +1035,13 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
   end
 
   defp can_go_back?(session, participant) do
-    participant.is_facilitator and session.state in ["summary", "actions"]
+    cond do
+      # All participants can see back button on wrap-up page
+      session.state == "completed" -> true
+      # Only facilitator can go back from summary/actions
+      session.state in ["summary", "actions"] -> participant.is_facilitator
+      true -> false
+    end
   end
 
   defp render_back_button(assigns) do
@@ -2036,33 +2057,33 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
           </div>
         <% end %>
         
+    <!-- Export -->
+        <div class="bg-gray-800 rounded-lg p-4 mb-6">
+          <button
+            type="button"
+            disabled
+            class="w-full px-6 py-3 bg-gray-700 text-gray-400 font-semibold rounded-lg cursor-not-allowed flex items-center justify-center gap-2"
+            title="Export functionality coming soon"
+          >
+            <span>Export Results</span>
+            <span class="text-xs">(Coming Soon)</span>
+          </button>
+        </div>
+        
     <!-- Finish Workshop -->
-        <div class="bg-gray-800 rounded-lg p-6">
-          <div class="flex flex-col sm:flex-row gap-3 justify-center">
-            <button
-              type="button"
-              disabled
-              class="px-6 py-3 bg-gray-600 text-gray-400 font-semibold rounded-lg cursor-not-allowed flex items-center justify-center gap-2"
-              title="Export functionality coming soon"
-            >
-              <span>Export Results</span>
-              <span class="text-xs">(Coming Soon)</span>
-            </button>
-            <%= if @participant.is_facilitator do %>
-              <button
-                phx-click="finish_workshop"
-                class="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors"
-              >
-                Finish Workshop
-              </button>
-            <% end %>
-          </div>
+        <div class="bg-gray-800 rounded-lg p-4">
           <%= if @participant.is_facilitator do %>
-            <p class="text-center text-gray-500 text-sm mt-3">
+            <button
+              phx-click="finish_workshop"
+              class="w-full px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors"
+            >
+              Finish Workshop
+            </button>
+            <p class="text-center text-gray-500 text-sm mt-2">
               Finish the workshop and return to the home page.
             </p>
           <% else %>
-            <p class="text-center text-gray-400 text-sm mt-3">
+            <p class="text-center text-gray-400">
               Waiting for facilitator to finish the workshop...
             </p>
           <% end %>
