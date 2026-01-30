@@ -4,6 +4,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
   """
   use ProductiveWorkgroupsWeb, :live_view
 
+  alias ProductiveWorkgroups.Export
   alias ProductiveWorkgroups.Facilitation
   alias ProductiveWorkgroups.Notes
   alias ProductiveWorkgroups.Scoring
@@ -57,6 +58,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
      |> assign(show_facilitator_tips: false)
      |> assign(show_notes: false)
      |> assign(note_input: "")
+     |> assign(show_export_modal: false)
      |> init_timer_assigns()
      |> load_scoring_data(workshop_session, participant)
      |> load_summary_data(workshop_session)
@@ -564,6 +566,37 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
       do_go_back(socket)
     else
       {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("toggle_export_modal", _params, socket) do
+    {:noreply, assign(socket, show_export_modal: !socket.assigns.show_export_modal)}
+  end
+
+  @impl true
+  def handle_event("close_export_modal", _params, socket) do
+    {:noreply, assign(socket, show_export_modal: false)}
+  end
+
+  @impl true
+  def handle_event("export", %{"format" => format, "content" => content}, socket) do
+    session = socket.assigns.session
+
+    format_atom = String.to_existing_atom(format)
+    content_atom = String.to_existing_atom(content)
+
+    case Export.export(session, format: format_atom, content: content_atom) do
+      {:ok, {filename, content_type, data}} ->
+        {:noreply,
+         socket
+         |> assign(show_export_modal: false)
+         |> push_event("download", %{filename: filename, content_type: content_type, data: data})}
+
+      {:error, _reason} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Failed to export data")}
     end
   end
 
@@ -2019,17 +2052,128 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
         <% end %>
         
     <!-- Export -->
-        <div class="bg-gray-800 rounded-lg p-4 mb-6">
+        <div class="bg-gray-800 rounded-lg p-4 mb-6" id="export-container" phx-hook="FileDownload">
           <button
             type="button"
-            disabled
-            class="w-full px-6 py-3 bg-gray-700 text-gray-400 font-semibold rounded-lg cursor-not-allowed flex items-center justify-center gap-2"
-            title="Export functionality coming soon"
+            phx-click="toggle_export_modal"
+            class="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
           >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+              />
+            </svg>
             <span>Export Results</span>
-            <span class="text-xs">(Coming Soon)</span>
           </button>
         </div>
+        
+    <!-- Export Modal -->
+        <%= if @show_export_modal do %>
+          <div
+            class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            phx-click="close_export_modal"
+          >
+            <div
+              class="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4"
+              phx-click-away="close_export_modal"
+            >
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-white">Export Workshop Data</h3>
+                <button
+                  type="button"
+                  phx-click="close_export_modal"
+                  class="text-gray-400 hover:text-white"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              <p class="text-gray-400 text-sm mb-6">
+                Choose what to export and the format.
+              </p>
+
+              <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                  <div class="col-span-2">
+                    <p class="text-sm text-gray-300 mb-2 font-medium">CSV Format</p>
+                  </div>
+                  <button
+                    type="button"
+                    phx-click="export"
+                    phx-value-format="csv"
+                    phx-value-content="results"
+                    class="px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm"
+                  >
+                    Results Only
+                  </button>
+                  <button
+                    type="button"
+                    phx-click="export"
+                    phx-value-format="csv"
+                    phx-value-content="actions"
+                    class="px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm"
+                  >
+                    Actions Only
+                  </button>
+                  <button
+                    type="button"
+                    phx-click="export"
+                    phx-value-format="csv"
+                    phx-value-content="all"
+                    class="col-span-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
+                  >
+                    Export All (CSV)
+                  </button>
+                </div>
+
+                <div class="border-t border-gray-700 pt-4">
+                  <div class="grid grid-cols-2 gap-3">
+                    <div class="col-span-2">
+                      <p class="text-sm text-gray-300 mb-2 font-medium">JSON Format</p>
+                    </div>
+                    <button
+                      type="button"
+                      phx-click="export"
+                      phx-value-format="json"
+                      phx-value-content="results"
+                      class="px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm"
+                    >
+                      Results Only
+                    </button>
+                    <button
+                      type="button"
+                      phx-click="export"
+                      phx-value-format="json"
+                      phx-value-content="actions"
+                      class="px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm"
+                    >
+                      Actions Only
+                    </button>
+                    <button
+                      type="button"
+                      phx-click="export"
+                      phx-value-format="json"
+                      phx-value-content="all"
+                      class="col-span-2 px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm"
+                    >
+                      Export All (JSON)
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        <% end %>
         
     <!-- Finish Workshop -->
         <div class="bg-gray-800 rounded-lg p-4">

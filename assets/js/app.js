@@ -147,6 +147,28 @@ Hooks.FacilitatorTimer = {
   }
 }
 
+// File download hook for export functionality
+Hooks.FileDownload = {
+  mounted() {
+    this.handleEvent("download", ({filename, content_type, data}) => {
+      // Create a blob from the data
+      const blob = new Blob([data], { type: content_type })
+      const url = URL.createObjectURL(blob)
+
+      // Create a temporary link and trigger download
+      const link = document.createElement("a")
+      link.href = url
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      // Clean up the URL
+      URL.revokeObjectURL(url)
+    })
+  }
+}
+
 // Duration picker hook for client-side increment/decrement
 Hooks.DurationPicker = {
   mounted() {
