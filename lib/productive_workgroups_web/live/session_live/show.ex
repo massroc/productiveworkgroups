@@ -582,6 +582,19 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
     end
   end
 
+  @impl true
+  def handle_event("go_back", _params, socket) do
+    participant = socket.assigns.participant
+
+    if participant.is_facilitator do
+      do_go_back(socket)
+    else
+      {:noreply, socket}
+    end
+  end
+
+  # Private helper functions
+
   defp do_finish_workshop(socket) do
     session = socket.assigns.session
 
@@ -599,19 +612,6 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
       end
     end
   end
-
-  @impl true
-  def handle_event("go_back", _params, socket) do
-    participant = socket.assigns.participant
-
-    if participant.is_facilitator do
-      do_go_back(socket)
-    else
-      {:noreply, socket}
-    end
-  end
-
-  # Private helper functions
 
   defp do_go_back(socket) do
     session = socket.assigns.session

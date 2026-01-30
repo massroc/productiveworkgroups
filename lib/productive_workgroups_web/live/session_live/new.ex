@@ -111,7 +111,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.New do
               id="facilitator_name"
               value={@facilitator_name}
               placeholder="Enter your name"
-              class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-4 text-white text-lg placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               autofocus
               required
             />
@@ -272,13 +272,13 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.New do
 
             <%= if @timer_expanded do %>
               <div class="mt-3 space-y-3">
-                <div class="grid grid-cols-2 gap-3">
+                <div class="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     phx-click="select_duration"
                     phx-value-option="none"
                     class={[
-                      "px-4 py-3 rounded-lg border transition-colors text-left",
+                      "px-3 py-2 rounded-lg border transition-colors text-left text-sm",
                       if(@duration_option == "none",
                         do: "bg-blue-600 border-blue-500 text-white",
                         else: "bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-600"
@@ -292,7 +292,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.New do
                     phx-click="select_duration"
                     phx-value-option="120"
                     class={[
-                      "px-4 py-3 rounded-lg border transition-colors text-left",
+                      "px-3 py-2 rounded-lg border transition-colors text-left text-sm",
                       if(@duration_option == "120",
                         do: "bg-blue-600 border-blue-500 text-white",
                         else: "bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-600"
@@ -300,14 +300,14 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.New do
                     ]}
                   >
                     <div class="font-medium">2 hours</div>
-                    <div class="text-sm opacity-75">Normal</div>
+                    <div class="text-xs opacity-75">Normal</div>
                   </button>
                   <button
                     type="button"
                     phx-click="select_duration"
                     phx-value-option="210"
                     class={[
-                      "px-4 py-3 rounded-lg border transition-colors text-left",
+                      "px-3 py-2 rounded-lg border transition-colors text-left text-sm",
                       if(@duration_option == "210",
                         do: "bg-blue-600 border-blue-500 text-white",
                         else: "bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-600"
@@ -315,14 +315,14 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.New do
                     ]}
                   >
                     <div class="font-medium">3.5 hours</div>
-                    <div class="text-sm opacity-75">Full session</div>
+                    <div class="text-xs opacity-75">Full session</div>
                   </button>
                   <button
                     type="button"
                     phx-click="select_duration"
                     phx-value-option="custom"
                     class={[
-                      "px-4 py-3 rounded-lg border transition-colors text-left",
+                      "px-3 py-2 rounded-lg border transition-colors text-left text-sm",
                       if(@duration_option == "custom",
                         do: "bg-blue-600 border-blue-500 text-white",
                         else: "bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-600"
@@ -330,7 +330,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.New do
                     ]}
                   >
                     <div class="font-medium">Custom</div>
-                    <div class="text-sm opacity-75">Set your own</div>
+                    <div class="text-xs opacity-75">Set your own</div>
                   </button>
                 </div>
 
