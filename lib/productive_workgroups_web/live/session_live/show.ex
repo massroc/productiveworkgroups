@@ -504,7 +504,9 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
         {:noreply,
          socket
          |> assign(session: updated_session)
-         |> load_scoring_data(updated_session, socket.assigns.participant)}
+         |> load_scoring_data(updated_session, socket.assigns.participant)
+         |> assign(scores_revealed: false)
+         |> assign(has_submitted: false)}
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Failed to go back")}
@@ -539,7 +541,8 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
     {:noreply,
      socket
      |> load_scoring_data(session, socket.assigns.participant)
-     |> assign(scores_revealed: false)}
+     |> assign(scores_revealed: false)
+     |> assign(has_submitted: false)}
   end
 
   defp go_back_to_previous_question_results(socket, session) do
