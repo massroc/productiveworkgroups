@@ -1019,7 +1019,6 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
         <% _ -> %>
           {render_lobby(assigns)}
       <% end %>
-      {render_back_button(assigns)}
     </div>
     """
   end
@@ -1033,30 +1032,6 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
         phase_name={@timer_phase_name}
         warning_threshold={@timer_warning_threshold}
       />
-    <% end %>
-    """
-  end
-
-  defp can_go_back?(session, participant) do
-    cond do
-      # All participants can see back button on wrap-up page
-      session.state == "completed" -> true
-      # Only facilitator can go back from summary/actions
-      session.state in ["summary", "actions"] -> participant.is_facilitator
-      true -> false
-    end
-  end
-
-  defp render_back_button(assigns) do
-    ~H"""
-    <%= if can_go_back?(@session, @participant) do %>
-      <button
-        phx-click="go_back"
-        class="fixed bottom-4 left-4 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white font-medium rounded-lg transition-colors flex items-center gap-2 shadow-lg"
-      >
-        <span>←</span>
-        <span>Back</span>
-      </button>
     <% end %>
     """
   end
@@ -1707,7 +1682,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
                         _ -> "text-gray-400"
                       end
                     ]}>
-                      {score.combined_team_value}/10
+                      {round(score.combined_team_value)}/10
                     </div>
                     <div class="flex items-center justify-end gap-1 text-xs text-gray-500">
                       <span>team</span>
@@ -1731,24 +1706,25 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
                 </div>
               </div>
               
-    <!-- Individual Scores - 10 horizontal boxes -->
+    <!-- Individual Scores with names -->
               <%= if length(question_scores) > 0 do %>
-                <div class="flex flex-wrap gap-1.5">
+                <% score_count = length(question_scores) %>
+                <div
+                  class="grid gap-2"
+                  style={"grid-template-columns: repeat(#{min(score_count, 10)}, minmax(0, 1fr))"}
+                >
                   <%= for s <- question_scores do %>
-                    <div
-                      class={[
-                        "rounded px-2 py-1 text-center min-w-[2.5rem]",
-                        case s.color do
-                          :green -> "bg-green-900/50 border border-green-700"
-                          :amber -> "bg-yellow-900/50 border border-yellow-700"
-                          :red -> "bg-red-900/50 border border-red-700"
-                          _ -> "bg-gray-700"
-                        end
-                      ]}
-                      title={s.participant_name}
-                    >
+                    <div class={[
+                      "rounded p-2 text-center",
+                      case s.color do
+                        :green -> "bg-green-900/50 border border-green-700"
+                        :amber -> "bg-yellow-900/50 border border-yellow-700"
+                        :red -> "bg-red-900/50 border border-red-700"
+                        _ -> "bg-gray-700"
+                      end
+                    ]}>
                       <div class={[
-                        "text-sm font-bold",
+                        "text-lg font-bold",
                         case s.color do
                           :green -> "text-green-400"
                           :amber -> "text-yellow-400"
@@ -1761,6 +1737,9 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
                         <% else %>
                           {s.value}
                         <% end %>
+                      </div>
+                      <div class="text-xs text-gray-400 truncate" title={s.participant_name}>
+                        {s.participant_name}
                       </div>
                     </div>
                   <% end %>
@@ -1785,15 +1764,24 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
           <% end %>
         </div>
         
-    <!-- Continue to Wrap-Up Button -->
+    <!-- Navigation Footer -->
         <div class="bg-gray-800 rounded-lg p-6">
           <%= if @participant.is_facilitator do %>
-            <button
-              phx-click="continue_to_wrapup"
-              class="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors"
-            >
-              Continue to Wrap-Up →
-            </button>
+            <div class="flex gap-3">
+              <button
+                phx-click="go_back"
+                class="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+              >
+                <span>←</span>
+                <span>Back</span>
+              </button>
+              <button
+                phx-click="continue_to_wrapup"
+                class="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors"
+              >
+                Continue to Wrap-Up →
+              </button>
+            </div>
             <p class="text-center text-gray-500 text-sm mt-2">
               Proceed to create action items and finish the workshop.
             </p>
@@ -1930,7 +1918,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
                   end
                 ]}>
                   <%= if score.combined_team_value do %>
-                    {score.combined_team_value}/10
+                    {round(score.combined_team_value)}/10
                   <% else %>
                     —
                   <% end %>
@@ -1974,7 +1962,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
                       <span class="text-green-400">✓</span>
                       <span>{item.title}</span>
                       <span class="text-green-400 font-semibold ml-auto">
-                        {item.combined_team_value}/10
+                        {round(item.combined_team_value)}/10
                       </span>
                     </li>
                   <% end %>
@@ -1994,7 +1982,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
                       <span class="text-red-400">!</span>
                       <span>{item.title}</span>
                       <span class="text-red-400 font-semibold ml-auto">
-                        {item.combined_team_value}/10
+                        {round(item.combined_team_value)}/10
                       </span>
                     </li>
                   <% end %>
@@ -2175,15 +2163,24 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
           </div>
         <% end %>
         
-    <!-- Finish Workshop -->
-        <div class="bg-gray-800 rounded-lg p-4">
+    <!-- Navigation Footer -->
+        <div class="bg-gray-800 rounded-lg p-6">
           <%= if @participant.is_facilitator do %>
-            <button
-              phx-click="finish_workshop"
-              class="w-full px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors"
-            >
-              Finish Workshop
-            </button>
+            <div class="flex gap-3">
+              <button
+                phx-click="go_back"
+                class="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+              >
+                <span>←</span>
+                <span>Back</span>
+              </button>
+              <button
+                phx-click="finish_workshop"
+                class="flex-1 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors"
+              >
+                Finish Workshop
+              </button>
+            </div>
             <p class="text-center text-gray-500 text-sm mt-2">
               Finish the workshop and return to the home page.
             </p>
