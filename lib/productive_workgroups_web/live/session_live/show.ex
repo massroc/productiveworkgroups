@@ -1715,7 +1715,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
               
     <!-- Individual Scores with names -->
               <%= if length(question_scores) > 0 do %>
-                <div class="flex flex-wrap gap-2">
+                <div class="flex flex-wrap gap-2 justify-center">
                   <%= for s <- question_scores do %>
                     <div class={[
                       "rounded p-2 text-center w-16",
