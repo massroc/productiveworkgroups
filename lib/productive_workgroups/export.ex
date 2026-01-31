@@ -124,7 +124,9 @@ defmodule ProductiveWorkgroups.Export do
         &get_participant_score(&1, question_scores, score.scale_type)
       )
 
-    team_value = if score.combined_team_value, do: "#{score.combined_team_value}/10", else: ""
+    team_value =
+      if score.combined_team_value, do: "#{round(score.combined_team_value)}/10", else: ""
+
     "#{csv_escape(score.title)},#{team_value},#{score_values}"
   end
 
@@ -215,7 +217,8 @@ defmodule ProductiveWorkgroups.Export do
             index: score.question_index + 1,
             title: score.title,
             scale_type: score.scale_type,
-            combined_team_value: score.combined_team_value,
+            combined_team_value:
+              if(score.combined_team_value, do: round(score.combined_team_value), else: nil),
             average: score.average,
             min: score.min,
             max: score.max,

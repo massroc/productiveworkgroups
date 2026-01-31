@@ -72,7 +72,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.ScoreResultsComponent do
             )
           ]}
         >
-          <span>{if @show_notes, do: "Hide", else: "Take"} Notes</span>
+          <span>{if @show_notes, do: "Hide", else: "Add"} Notes</span>
           <%= if length(@question_notes) > 0 do %>
             <span class="bg-gray-600 text-white text-xs px-2 py-0.5 rounded-full">
               {length(@question_notes)}
@@ -84,14 +84,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.ScoreResultsComponent do
     <!-- Notes capture (collapsible) -->
       <%= if @show_notes do %>
         <div class="bg-gray-800 rounded-lg p-6 border border-blue-600/50">
-          <h2 class="text-lg font-semibold text-blue-400 mb-4">
-            Discussion Notes
-            <%= if length(@question_notes) > 0 do %>
-              <span class="text-sm font-normal text-gray-400">({length(@question_notes)})</span>
-            <% end %>
-          </h2>
-          
-    <!-- Existing notes -->
+          <!-- Existing notes -->
           <%= if length(@question_notes) > 0 do %>
             <ul class="space-y-3 mb-4">
               <%= for note <- @question_notes do %>

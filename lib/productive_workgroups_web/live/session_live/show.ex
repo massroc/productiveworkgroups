@@ -59,6 +59,7 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
      |> assign(show_notes: false)
      |> assign(note_input: "")
      |> assign(show_export_modal: false)
+     |> assign(export_content: "all")
      |> init_timer_assigns()
      |> load_scoring_data(workshop_session, participant)
      |> load_summary_data(workshop_session)
@@ -580,8 +581,14 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
   end
 
   @impl true
-  def handle_event("export", %{"format" => format, "content" => content}, socket) do
+  def handle_event("select_export_content", %{"content" => content}, socket) do
+    {:noreply, assign(socket, export_content: content)}
+  end
+
+  @impl true
+  def handle_event("export", %{"format" => format}, socket) do
     session = socket.assigns.session
+    content = socket.assigns.export_content
 
     format_atom = String.to_existing_atom(format)
     content_atom = String.to_existing_atom(content)
@@ -1708,14 +1715,10 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
               
     <!-- Individual Scores with names -->
               <%= if length(question_scores) > 0 do %>
-                <% score_count = length(question_scores) %>
-                <div
-                  class="grid gap-2"
-                  style={"grid-template-columns: repeat(#{min(score_count, 10)}, minmax(0, 1fr))"}
-                >
+                <div class="flex flex-wrap gap-2">
                   <%= for s <- question_scores do %>
                     <div class={[
-                      "rounded p-2 text-center",
+                      "rounded p-2 text-center w-16",
                       case s.color do
                         :green -> "bg-green-900/50 border border-green-700"
                         :amber -> "bg-yellow-900/50 border border-yellow-700"
@@ -2019,26 +2022,6 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
           <% end %>
         </div>
         
-    <!-- Notes Summary -->
-        <%= if length(@all_notes) > 0 do %>
-          <div class="bg-gray-800 rounded-lg p-4 mb-6">
-            <h2 class="text-lg font-semibold text-white mb-3">
-              Discussion Notes ({length(@all_notes)})
-            </h2>
-            <ul class="space-y-2">
-              <%= for note <- @all_notes do %>
-                <li class="bg-gray-700 rounded-lg p-3">
-                  <%= if note.question_index do %>
-                    <div class="text-xs text-gray-500 mb-1">Question {note.question_index + 1}</div>
-                  <% end %>
-                  <p class="text-gray-300">{note.content}</p>
-                  <p class="text-xs text-gray-500 mt-1">— {note.author_name}</p>
-                </li>
-              <% end %>
-            </ul>
-          </div>
-        <% end %>
-        
     <!-- Export -->
         <div class="bg-gray-800 rounded-lg p-4 mb-6" id="export-container" phx-hook="FileDownload">
           <button
@@ -2087,77 +2070,94 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
               </div>
 
               <p class="text-gray-400 text-sm mb-6">
-                Choose what to export and the format.
+                Select what to include in the export.
               </p>
 
-              <div class="space-y-4">
-                <div class="grid grid-cols-2 gap-3">
-                  <div class="col-span-2">
-                    <p class="text-sm text-gray-300 mb-2 font-medium">CSV Format</p>
-                  </div>
-                  <button
-                    type="button"
-                    phx-click="export"
-                    phx-value-format="csv"
-                    phx-value-content="results"
-                    class="px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm"
-                  >
-                    Results Only
-                  </button>
-                  <button
-                    type="button"
-                    phx-click="export"
-                    phx-value-format="csv"
-                    phx-value-content="actions"
-                    class="px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm"
-                  >
-                    Actions Only
-                  </button>
-                  <button
-                    type="button"
-                    phx-click="export"
-                    phx-value-format="csv"
+              <div class="space-y-3 mb-6">
+                <label class={[
+                  "flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors",
+                  if(@export_content == "all",
+                    do: "bg-blue-600/20 border border-blue-500",
+                    else: "bg-gray-700 border border-gray-600 hover:bg-gray-600"
+                  )
+                ]}>
+                  <input
+                    type="radio"
+                    name="export_content"
+                    value="all"
+                    checked={@export_content == "all"}
+                    phx-click="select_export_content"
                     phx-value-content="all"
-                    class="col-span-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
-                  >
-                    Export All (CSV)
-                  </button>
-                </div>
-
-                <div class="border-t border-gray-700 pt-4">
-                  <div class="grid grid-cols-2 gap-3">
-                    <div class="col-span-2">
-                      <p class="text-sm text-gray-300 mb-2 font-medium">JSON Format</p>
-                    </div>
-                    <button
-                      type="button"
-                      phx-click="export"
-                      phx-value-format="json"
-                      phx-value-content="results"
-                      class="px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm"
-                    >
-                      Results Only
-                    </button>
-                    <button
-                      type="button"
-                      phx-click="export"
-                      phx-value-format="json"
-                      phx-value-content="actions"
-                      class="px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm"
-                    >
-                      Actions Only
-                    </button>
-                    <button
-                      type="button"
-                      phx-click="export"
-                      phx-value-format="json"
-                      phx-value-content="all"
-                      class="col-span-2 px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm"
-                    >
-                      Export All (JSON)
-                    </button>
+                    class="w-4 h-4 text-blue-600"
+                  />
+                  <div>
+                    <div class="text-white font-medium">Everything</div>
+                    <div class="text-gray-400 text-sm">Results, notes, and action items</div>
                   </div>
-                </div>
+                </label>
+
+                <label class={[
+                  "flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors",
+                  if(@export_content == "results",
+                    do: "bg-blue-600/20 border border-blue-500",
+                    else: "bg-gray-700 border border-gray-600 hover:bg-gray-600"
+                  )
+                ]}>
+                  <input
+                    type="radio"
+                    name="export_content"
+                    value="results"
+                    checked={@export_content == "results"}
+                    phx-click="select_export_content"
+                    phx-value-content="results"
+                    class="w-4 h-4 text-blue-600"
+                  />
+                  <div>
+                    <div class="text-white font-medium">Results Only</div>
+                    <div class="text-gray-400 text-sm">Scores, participants, and notes</div>
+                  </div>
+                </label>
+
+                <label class={[
+                  "flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors",
+                  if(@export_content == "actions",
+                    do: "bg-blue-600/20 border border-blue-500",
+                    else: "bg-gray-700 border border-gray-600 hover:bg-gray-600"
+                  )
+                ]}>
+                  <input
+                    type="radio"
+                    name="export_content"
+                    value="actions"
+                    checked={@export_content == "actions"}
+                    phx-click="select_export_content"
+                    phx-value-content="actions"
+                    class="w-4 h-4 text-blue-600"
+                  />
+                  <div>
+                    <div class="text-white font-medium">Actions Only</div>
+                    <div class="text-gray-400 text-sm">Action items with owners</div>
+                  </div>
+                </label>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  phx-click="export"
+                  phx-value-format="csv"
+                  class="px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+                >
+                  Export CSV
+                </button>
+                <button
+                  type="button"
+                  phx-click="export"
+                  phx-value-format="json"
+                  class="px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors font-medium"
+                >
+                  Export JSON
+                </button>
               </div>
             </div>
           </div>

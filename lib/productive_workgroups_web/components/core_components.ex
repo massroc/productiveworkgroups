@@ -718,7 +718,7 @@ defmodule ProductiveWorkgroupsWeb.CoreComponents do
       data-threshold={@warning_threshold || div(@total_seconds, 10)}
       class={[
         "fixed top-4 right-4 z-40 rounded-lg px-4 py-2 shadow-lg",
-        "flex flex-col items-end transition-colors duration-300",
+        "flex flex-col items-center transition-colors duration-300",
         if(@is_warning,
           do: "bg-red-900/90 border border-red-600",
           else: "bg-gray-800/90 border border-gray-600"
