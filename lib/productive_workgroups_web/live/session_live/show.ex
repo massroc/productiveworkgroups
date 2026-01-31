@@ -2045,12 +2045,9 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
         <%= if @show_export_modal do %>
           <div
             class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-            phx-click="close_export_modal"
+            phx-click-away="close_export_modal"
           >
-            <div
-              class="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4"
-              phx-click-away="close_export_modal"
-            >
+            <div class="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
               <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-semibold text-white">Export Workshop Data</h3>
                 <button
@@ -2119,24 +2116,43 @@ defmodule ProductiveWorkgroupsWeb.SessionLive.Show do
                 </label>
 
                 <label class={[
-                  "flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors",
-                  if(@export_content == "actions",
-                    do: "bg-blue-600/20 border border-blue-500",
-                    else: "bg-gray-700 border border-gray-600 hover:bg-gray-600"
-                  )
+                  "flex items-center gap-3 p-3 rounded-lg transition-colors",
+                  cond do
+                    @action_count == 0 ->
+                      "bg-gray-800 border border-gray-700 cursor-not-allowed opacity-50"
+
+                    @export_content == "actions" ->
+                      "bg-blue-600/20 border border-blue-500 cursor-pointer"
+
+                    true ->
+                      "bg-gray-700 border border-gray-600 hover:bg-gray-600 cursor-pointer"
+                  end
                 ]}>
                   <input
                     type="radio"
                     name="export_content"
                     value="actions"
                     checked={@export_content == "actions"}
+                    disabled={@action_count == 0}
                     phx-click="select_export_content"
                     phx-value-content="actions"
                     class="w-4 h-4 text-blue-600"
                   />
                   <div>
-                    <div class="text-white font-medium">Actions Only</div>
-                    <div class="text-gray-400 text-sm">Action items with owners</div>
+                    <div class={
+                      if @action_count == 0,
+                        do: "text-gray-500 font-medium",
+                        else: "text-white font-medium"
+                    }>
+                      Actions Only
+                    </div>
+                    <div class="text-gray-400 text-sm">
+                      <%= if @action_count == 0 do %>
+                        No action items recorded
+                      <% else %>
+                        Action items with owners
+                      <% end %>
+                    </div>
                   </div>
                 </label>
               </div>
